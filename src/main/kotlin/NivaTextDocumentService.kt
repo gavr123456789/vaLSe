@@ -11,9 +11,9 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import java.util.concurrent.CompletableFuture
 import kotlin.time.TimeSource
 
-class NivaTextDocumentService(val workspaceService: NivaWorkspaceService) : TextDocumentService {
-    private val ls = LS()
+class NivaTextDocumentService() : TextDocumentService {
     lateinit var client: LanguageClient
+    private val ls = LS {client.info(it)}
     private var typeDB: TypeDB? = null
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null

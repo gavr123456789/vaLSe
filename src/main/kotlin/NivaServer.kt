@@ -9,7 +9,7 @@ import kotlin.system.exitProcess
 class NivaServer : LanguageServer, LanguageClientAware {
     private var errorCode: Int = 1
     private val workspaceService = NivaWorkspaceService()
-    private val textDocumentService = NivaTextDocumentService(workspaceService)
+    private val textDocumentService = NivaTextDocumentService()
 
     // https://microsoft.github.io/language-server-protocol/specification#initialize
     override fun initialize(params: InitializeParams?): CompletableFuture<InitializeResult>? {
