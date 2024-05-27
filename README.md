@@ -1,2 +1,0 @@
-# vaLSe
-niva Language Server

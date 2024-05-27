@@ -1,26 +1,19 @@
 package org.example
 
-import frontend.resolver.TypeDB
+import frontend.resolver.KeywordMsgMetaData
+import frontend.resolver.Type
 import main.LS
 import main.LspResult
+import main.frontend.parser.types.ast.Expression
 import main.onCompletion
-import main.resolveAll
+import main.resolveAllWithChangedFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.launch.LSPLauncher
-import org.eclipse.lsp4j.services.*
+import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.services.WorkspaceService
 import java.io.InputStream
 import java.io.OutputStream
-import java.util.concurrent.CompletableFuture
-import kotlin.collections.mutableListOf
-import kotlin.system.exitProcess
-import kotlin.text.Regex
-import kotlin.text.lines
-import kotlin.text.toRegex
-
-//import java.net.Socket
-
-const val stdInput = true
 
 fun main() {
 
@@ -34,137 +27,158 @@ fun main() {
     start(System.`in`, System.out)
 }
 
-class NivaServer : LanguageServer, LanguageClientAware {
-    private var errorCode: Int = 1
-    private val workspaceService = NivaWorkspaceService()
-    private val textDocumentService = NivaTextDocumentService(workspaceService)
 
-    // https://microsoft.github.io/language-server-protocol/specification#initialize
-    override fun initialize(params: InitializeParams?): CompletableFuture<InitializeResult>? {
-        val capabilities = ServerCapabilities()
+fun onCompletion1(ls: LS, position: CompletionParams, client: LanguageClient, sourceChanged: String?, lastPathChangedUri: String?): MutableList<CompletionItem> {
 
-        capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
-        capabilities.completionProvider = CompletionOptions()
-        capabilities.workspace = WorkspaceServerCapabilities()
+    val line = position.position.line
+    val character = position.position.character
+    client.info("Completion on $line $character")
 
+    val q = ls.onCompletion(position.textDocument.uri, line, character)
 
-        return CompletableFuture.completedFuture(InitializeResult(capabilities))
-    }
-
-    // https://microsoft.github.io/language-server-protocol/specification#shutdown
-    override fun shutdown(): CompletableFuture<Any>? {
-        errorCode = 0
-        return null
-    }
-
-    // https://microsoft.github.io/language-server-protocol/specification#exit
-    override fun exit() {
-        exitProcess(errorCode)
-    }
-
-    override fun getTextDocumentService(): TextDocumentService? {
-        return textDocumentService
-    }
-
-    override fun getWorkspaceService(): WorkspaceService {
-        return workspaceService
-    }
-
-    override fun connect(client: LanguageClient) {
-
-        textDocumentService.client = client
-        workspaceService.client = client
-
-
-        client.info("Hallo from niva Server!")
-
-    }
+    val realCompletions = onCompletion(q, client, sourceChanged, line, character, ls, lastPathChangedUri)
+    return realCompletions
 }
 
-
-class NivaTextDocumentService(val workspaceService: NivaWorkspaceService) : TextDocumentService {
-    val ls = LS()
-    lateinit var client: LanguageClient
-    var typeDB: TypeDB? = null
-//    lateinit var resolver: Resolver
-
-    override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
-        client.info("Completion on" + position.textDocument.uri)
-        client.info("Completion on position.position" + position.position)
-
-        val line = position.position.line
-        val character = position.position.character
-
-        val q = ls.onCompletion(position.textDocument.uri, line, character)
-
-        val getRealCompletions = {
-            val completions = mutableListOf<CompletionItem>()
-            when (q) {
-                is LspResult.Found -> {
-
-                }
-
-                is LspResult.NotFoundFile -> {
-                    client.info("LspResult.NotFoundFile")
-                }
-
-                is LspResult.NotFoundLine -> {
-                    client.info("LspResult.NotFoundLine")
-                }
-            }
-
-            completions
-        }
-
-
-
-//        val item2 = CompletionItem("helloWorld")
-//        item2.kind
-
-        val createTypesCompletion = {
-            val completions = mutableListOf<CompletionItem>()
-            val tdb = typeDB
-            if (tdb != null) {
-                val a = tdb.userTypes.values.flatten().map { type ->
-                    CompletionItem(type.name).also {
-                        it.detail = "Package: " + type.pkg
-                        val fields = type.fields.joinToString("\n") { f ->
-                            f.toString()
+fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
+                 lastPathChangedUri: String?): MutableList<CompletionItem> {
+    val completions = mutableListOf<CompletionItem>()
+    when (q) {
+        is LspResult.Found -> {
+            client.info("LspResult.Found completion for ${q.x.first} on ${q.x.first?.token?.relPos}")
+            val expr = q.x.first
+            if (expr is Expression) {
+                val type = expr.type!!
+                type.protocols.values.forEach { protocol ->
+                    val unaryCompletions = protocol.unaryMsgs.values.map { unary ->
+                        // определить тип сообщения
+                        // если это кеворд то добавить 
+                        CompletionItem(unary.name).also {
+                            it.detail = "$type -> ${unary.returnType} " + "Pkg: " + unary.pkg
+                            it.kind = CompletionItemKind.Function
+                            val errors = unary.errors
+                            val possibleErrors = errors?.joinToString { it.name } ?: ""
+                            it.documentation = Either.forLeft("Possible errors: $possibleErrors")
                         }
-                        it.documentation = Either.forLeft(fields)
                     }
+                    val binaryCompletions = protocol.binaryMsgs.values.map { binary ->
+                        CompletionItem(binary.name).also {
+                            it.detail = "$type -> ${binary.returnType} " + "Pkg: " + binary.pkg
+                            it.kind = CompletionItemKind.Function
+                            val errors = binary.errors
+                            val possibleErrors = if (errors != null) "Possible errors: " + errors.joinToString { it.name } else ""
+                            it.documentation = Either.forLeft(possibleErrors)
+                        }
+                    }
+
+                    // from:  to:
+                    val constructInsertText = { kw: KeywordMsgMetaData ->
+                        kw.argTypes.joinToString(": ") { it.name } + ": "
+                    }
+
+                    val keywordCompletions = protocol.keywordMsgs.values.map { kw ->
+                        CompletionItem().also {
+                            it.detail = "$type -> ${kw.returnType} " + "Pkg: " + kw.pkg
+                            it.kind = CompletionItemKind.Function
+                            val errors = kw.errors
+                            val possibleErrors = if (errors != null) errors.joinToString { it.name } else ""
+                            it.documentation = Either.forLeft("Possible errors: $possibleErrors")
+
+                            it.label = kw.argTypes.joinToString(" ") { it.toString() } // from: Int to: String
+                            it.insertText = constructInsertText(kw)
+                        }
+                    }
+
+
+
+                    completions.addAll(unaryCompletions)
+                    completions.addAll(keywordCompletions)
+                    completions.addAll(binaryCompletions)
                 }
 
-                completions.addAll(a)
+                // fields
+                if (type is Type.UserLike) {
+                    client.info("type of ${q.x.first} is $type, adding fields")
+                    completions.addAll(type.fields.map { field ->
+                        CompletionItem().also {
+                            it.label = field.name
+                            it.detail = field.type.toString()
+                            it.kind = CompletionItemKind.Field
+                        }
+                    })
+                }
+                if (type is Type.EnumRootType) {
+                    completions.addAll(type.branches.map {
+                        CompletionItem("." + it.name).also {
+                            it.kind = CompletionItemKind.EnumMember
+                        }
+                    })
+                }
             }
-            completions
+        }
+
+        is LspResult.NotFoundLine -> {
+            client.info("sourceChanged == null is ${sourceChanged == null}")
+            sourceChanged?.let { sourceChanged->
+                lastPathChangedUri?.let { lastPathChangedUri ->
+                    // 1) insert bang
+                    val textWithBang = insertTextAtPosition(sourceChanged, line, character, "!!")
+//                    client.info("LspResult.NotFoundLine looking for scope st = ${ls.completionFromScope}")
+                    ls.resolveAllWithChangedFile(lastPathChangedUri, textWithBang)
+//                    client.info("after onCompletion LspResult.NotFoundLine looking for scope st = ${ls.completionFromScope}")
+                    completions.addAll(ls.completionFromScope.map { k ->
+                        CompletionItem(k.key).also {
+                            it.kind = CompletionItemKind.Variable
+                            it.detail = k.value.toString()
+                        }
+                    })
+                }
+
+            }
+
+
+
+
+            val st = q.x.first
+            client.info("LspResult.NotFoundLine looking for scope st = $st, completions = $completions")
+        }
+        is LspResult.NotFoundFile -> {
+            client.info("LspResult.NotFoundFile")
         }
 
 
-        return CompletableFuture.completedFuture(Either.forRight(CompletionList(createTypesCompletion())))
     }
 
-    override fun didOpen(params: DidOpenTextDocumentParams) {
-        client.info("params uri ${params.textDocument.uri}")
-        val resolver = ls.resolveAll(params.textDocument.uri)
-        if (resolver != null) {
-            this.typeDB = resolver.typeDB
-            client.info("userTypes count =  ${resolver.typeDB.userTypes.count()}")
-        }
-    }
-
-    override fun didSave(params: DidSaveTextDocumentParams) {
-        // how about run gradlew assemble on save
-    }
-
-    override fun didClose(params: DidCloseTextDocumentParams) {
-    }
-
-    override fun didChange(params: DidChangeTextDocumentParams) {
-        val resolver = ls.resolveAll(params.textDocument.uri)
-//        client.let { warnAllCaps(it, params) }
-    }
+    return completions
 }
+
+fun insertTextAtPosition(text: String, row: Int, column: Int, insertText: String): String {
+    // Разделить текст на строки
+    val lines = text.lines().toMutableList()
+
+    // Проверить, существует ли нужная строка
+    if (row < 0 || row >= lines.size) {
+        throw IllegalArgumentException("Invalid row number")
+    }
+
+    // Получить нужную строку
+    val line = lines[row]
+
+    // Проверить, существует ли нужная позиция в строке
+    if (column < 0 || column > line.length) {
+        throw IllegalArgumentException("Invalid column number")
+    }
+
+    // Вставить текст в нужную позицию
+    val newLine = StringBuilder(line).insert(column, insertText).toString()
+
+    // Обновить строку в списке строк
+    lines[row] = newLine
+
+    // Объединить строки обратно в текст
+    return lines.joinToString("\n")
+}
+
 
 // https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#adding-a-simple-validation
 fun warnAllCaps(client: LanguageClient, params: DidChangeTextDocumentParams) {
@@ -208,8 +222,7 @@ class NivaWorkspaceService : WorkspaceService {
 //        this.resolveWorkspaceSymbol()
     }
 
-    fun getCurrentOpenDirectory(): String? =
-        if (workspaces.isEmpty()) null else workspaces.first().name
+    fun getCurrentOpenDirectory(): String? = if (workspaces.isEmpty()) null else workspaces.first().name
 
 
     override fun didChangeConfiguration(params: DidChangeConfigurationParams?) {
