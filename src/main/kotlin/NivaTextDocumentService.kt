@@ -13,10 +13,11 @@ import kotlin.time.TimeSource
 
 class NivaTextDocumentService() : TextDocumentService {
     lateinit var client: LanguageClient
-    private val ls = LS {client.info(it)}
+    private val ls = LS {client.info("Niva LS: $it")}
     private var typeDB: TypeDB? = null
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null
+    private var lock: Boolean = false
 
     override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
         val realCompletions = onCompletion1(ls, position, client, sourceChanged, lastPathChangedUri)
@@ -41,20 +42,31 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun didChange(params: DidChangeTextDocumentParams) {
+
+        while (lock) {
+            client.info("LOCKED")
+        }
+
         val sourceChanged = params.contentChanges.first().text
+
         this.sourceChanged = sourceChanged
         this.lastPathChangedUri = params.textDocument.uri
+
+
         try {
+            lock = true
             ls.megaStore.data.clear()
 
             val mark = TimeSource.Monotonic.markNow()
             ls.resolveAllWithChangedFile(params.textDocument.uri, sourceChanged)
             client.info("resolved in ${mark.elapsedNow()}")
+//            client.info("FILE CHANGED = $sourceChanged")
         }
-        catch (_: Throwable) {
-
-        }
+//        catch (e: Throwable) {
+//            client.info("SERVER Throwable e = ${e.message}")
+//        }
         finally {
+            lock = false
 //            client.info("unlocked did change")
         }
 

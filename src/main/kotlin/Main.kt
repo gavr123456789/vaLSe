@@ -65,7 +65,7 @@ fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, l
                 type.protocols.values.forEach { protocol ->
                     val unaryCompletions = protocol.unaryMsgs.values.map { unary ->
                         // определить тип сообщения
-                        // если это кеворд то добавить 
+                        // если это кеворд то добавить
                         CompletionItem(unary.name).also {
                             it.detail = "$type -> ${unary.returnType} " + "Pkg: " + unary.pkg
                             it.kind = CompletionItemKind.Function
@@ -103,8 +103,6 @@ fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, l
                         }
                     }
 
-
-
                     completions.addAll(unaryCompletions)
                     completions.addAll(keywordCompletions)
                     completions.addAll(binaryCompletions)
@@ -121,6 +119,7 @@ fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, l
                         }
                     })
                 }
+
                 // enums
                 if (type is Type.EnumRootType) {
                     completions.addAll(type.branches.map {
@@ -149,16 +148,14 @@ fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, l
                 }
             }
 
-
-
-
             val st = q.x.first
-            client.info("LspResult.NotFoundLine looking for scope st = $st")
+            val scope = q.x.second
+            client.info("LspResult.NotFoundLine looking for scope st = $st, scope = $scope")
         }
+
         is LspResult.NotFoundFile -> {
             client.info("LspResult.NotFoundFile")
         }
-
 
     }
 
@@ -194,27 +191,27 @@ fun insertTextAtPosition(text: String, row: Int, column: Int, insertText: String
 
 
 // https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#adding-a-simple-validation
-fun warnAllCaps(client: LanguageClient, params: DidChangeTextDocumentParams) {
-    val pattern: Regex = """\b[A-Z]{2,}\b""".toRegex()
-
-    val diagnostics = mutableListOf<Diagnostic>()
-    params.contentChanges[0].text
-
-    for ((index, line) in params.contentChanges[0].text.lines().withIndex()) {
-        for (match in pattern.findAll(line)) {
-            val d = Diagnostic()
-            d.severity = DiagnosticSeverity.Warning
-            val start = Position(index, match.range.first)
-            val end = Position(index, match.range.last + 1)
-            d.range = Range(start, end)
-            d.message = "${match.value} is all uppercase."
-            d.source = "ex"
-            diagnostics.add(d)
-        }
-    }
-
-    client.publishDiagnostics(PublishDiagnosticsParams(params.textDocument.uri, diagnostics))
-}
+//fun warnAllCaps(client: LanguageClient, params: DidChangeTextDocumentParams) {
+//    val pattern: Regex = """\b[A-Z]{2,}\b""".toRegex()
+//
+//    val diagnostics = mutableListOf<Diagnostic>()
+//    params.contentChanges[0].text
+//
+//    for ((index, line) in params.contentChanges[0].text.lines().withIndex()) {
+//        for (match in pattern.findAll(line)) {
+//            val d = Diagnostic()
+//            d.severity = DiagnosticSeverity.Warning
+//            val start = Position(index, match.range.first)
+//            val end = Position(index, match.range.last + 1)
+//            d.range = Range(start, end)
+//            d.message = "${match.value} is all uppercase."
+//            d.source = "ex"
+//            diagnostics.add(d)
+//        }
+//    }
+//
+//    client.publishDiagnostics(PublishDiagnosticsParams(params.textDocument.uri, diagnostics))
+//}
 
 class NivaWorkspaceService : WorkspaceService {
     lateinit var client: LanguageClient
