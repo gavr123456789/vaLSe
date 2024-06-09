@@ -2,6 +2,7 @@ package org.example
 
 import frontend.resolver.TypeDB
 import main.LS
+import main.frontend.meta.CompilerError
 import main.resolveAll
 import main.resolveAllWithChangedFile
 import org.eclipse.lsp4j.*
@@ -13,11 +14,13 @@ import kotlin.time.TimeSource
 
 class NivaTextDocumentService() : TextDocumentService {
     lateinit var client: LanguageClient
-    private val ls = LS {client.info("Niva LS: $it")}
+     val ls = LS { client.info("Niva LS: $it") }
     private var typeDB: TypeDB? = null
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null
-    private var lock: Boolean = false
+     var lock: Boolean = false
+     var lastError: CompilerError? = null
+
 
     override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
         val realCompletions = onCompletion1(ls, position, client, sourceChanged, lastPathChangedUri)
@@ -25,13 +28,22 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
-        val resolver = ls.resolveAll(params.textDocument.uri)
-        if (resolver != null) {
-            this.typeDB = resolver.typeDB
-            client.info("did open userTypes count =  ${resolver.typeDB.userTypes.count()}")
+        try {
+            val resolver = ls.resolveAll(params.textDocument.uri)
+            @Suppress("SENSELESS_COMPARISON")
+            if (resolver != null) {
+                this.typeDB = resolver.typeDB
+                client.info("did open userTypes count =  ${resolver.typeDB.userTypes.count()}")
+            }
+            this.sourceChanged = params.textDocument.text
+            lastPathChangedUri = params.textDocument.uri
+        } catch (e: CompilerError) {
+            client.info("SERVER CompilerError e = ${e.message}")
+
+            lastError = e
+            errorAllErrors(client, params.textDocument.uri, e)
         }
-        this.sourceChanged = params.textDocument.text
-        lastPathChangedUri = params.textDocument.uri
+
     }
 
     override fun didSave(params: DidSaveTextDocumentParams) {
@@ -51,26 +63,33 @@ class NivaTextDocumentService() : TextDocumentService {
 
         this.sourceChanged = sourceChanged
         this.lastPathChangedUri = params.textDocument.uri
+        client.info("2 STARS RESOLVING ON CHANGE")
+        resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
+    }
+}
 
+fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
 
-        try {
-            lock = true
-            ls.megaStore.data.clear()
+    try {
+//        lock = true
+//        ls.megaStore.data.clear()// не надо клирить всю дату
+//        ls.megaStore.data.remove(File(URI(uri)).path)
 
-            val mark = TimeSource.Monotonic.markNow()
-            ls.resolveAllWithChangedFile(params.textDocument.uri, sourceChanged)
-            client.info("resolved in ${mark.elapsedNow()}")
-//            client.info("FILE CHANGED = $sourceChanged")
+        val mark = TimeSource.Monotonic.markNow()
+        ls.resolveAllWithChangedFile(uri, sourceChanged)
+        client.info("resolved in ${mark.elapsedNow()}")
+        // clear
+        client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
+//        lastError = null
+
+    } catch (e: CompilerError) {
+        client.info("SERVER Compiler error e = ${e.message}")
+//        lastError = e
+        if (needShowErrors) {
+            errorAllErrors(client, uri, e)
+
         }
-//        catch (e: Throwable) {
-//            client.info("SERVER Throwable e = ${e.message}")
-//        }
-        finally {
-            lock = false
-//            client.info("unlocked did change")
-        }
-
-//        client.let { warnAllCaps(it, params) }
-
+    } finally {
+//        lock = false
     }
 }

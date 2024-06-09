@@ -4,11 +4,11 @@ import frontend.resolver.KeywordMsgMetaData
 import frontend.resolver.Type
 import main.LS
 import main.LspResult
+import main.frontend.meta.CompilerError
 import main.frontend.parser.types.ast.Expression
 import main.frontend.parser.types.ast.KeywordMsg
 import main.frontend.parser.types.ast.VarDeclaration
 import main.onCompletion
-import main.resolveAllWithChangedFile
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.launch.LSPLauncher
@@ -30,11 +30,17 @@ fun main() {
 }
 
 
-fun onCompletion1(ls: LS, position: CompletionParams, client: LanguageClient, sourceChanged: String?, lastPathChangedUri: String?): MutableList<CompletionItem> {
+fun onCompletion1(
+    ls: LS,
+    position: CompletionParams,
+    client: LanguageClient,
+    sourceChanged: String?,
+    lastPathChangedUri: String?
+): MutableList<CompletionItem> {
 
     val line = position.position.line
     val character = position.position.character
-//    client.info("Completion on $line $character")
+    client.info("onCompletion1 on $line $character")
 
     val q = ls.onCompletion(position.textDocument.uri, line, character)
 
@@ -42,8 +48,10 @@ fun onCompletion1(ls: LS, position: CompletionParams, client: LanguageClient, so
     return realCompletions
 }
 
-fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
-                 lastPathChangedUri: String?): MutableList<CompletionItem> {
+fun onCompletion(
+    q: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
+    lastPathChangedUri: String?
+): MutableList<CompletionItem> {
     val completions = mutableListOf<CompletionItem>()
 
     when (q) {
@@ -79,7 +87,8 @@ fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, l
                             it.detail = "$type -> ${binary.returnType} " + "Pkg: " + binary.pkg
                             it.kind = CompletionItemKind.Function
                             val errors = binary.errors
-                            val possibleErrors = if (errors != null) "Possible errors: " + errors.joinToString { it.name } else ""
+                            val possibleErrors =
+                                if (errors != null) "Possible errors: " + errors.joinToString { it.name } else ""
                             it.documentation = Either.forLeft(possibleErrors)
                         }
                     }
@@ -133,12 +142,14 @@ fun onCompletion(q: LspResult, client: LanguageClient, sourceChanged: String?, l
 
         is LspResult.NotFoundLine -> {
 //            client.info("sourceChanged == null is ${sourceChanged == null}")
-            sourceChanged?.let { sourceChanged2->
+            sourceChanged?.let { sourceChanged2 ->
                 lastPathChangedUri?.let { lastPathChangedUri ->
                     // insert bang and compile it with bang,
                     // so it throws with scope information from this bang
                     val textWithBang = insertTextAtPosition(sourceChanged2, line, character, "!!")
-                    ls.resolveAllWithChangedFile(lastPathChangedUri, textWithBang)
+                    client.info("NotFoundLine, START RESOLVING TO GET SCOPE")
+                    resolveSingleFile(ls, client, lastPathChangedUri, textWithBang, false)
+//                    ls.resolveAllWithChangedFile(lastPathChangedUri, textWithBang)
                     completions.addAll(ls.completionFromScope.map { k ->
                         CompletionItem(k.key).also {
                             it.kind = CompletionItemKind.Variable
@@ -191,27 +202,28 @@ fun insertTextAtPosition(text: String, row: Int, column: Int, insertText: String
 
 
 // https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#adding-a-simple-validation
-//fun warnAllCaps(client: LanguageClient, params: DidChangeTextDocumentParams) {
-//    val pattern: Regex = """\b[A-Z]{2,}\b""".toRegex()
-//
-//    val diagnostics = mutableListOf<Diagnostic>()
-//    params.contentChanges[0].text
-//
-//    for ((index, line) in params.contentChanges[0].text.lines().withIndex()) {
-//        for (match in pattern.findAll(line)) {
-//            val d = Diagnostic()
-//            d.severity = DiagnosticSeverity.Warning
-//            val start = Position(index, match.range.first)
-//            val end = Position(index, match.range.last + 1)
-//            d.range = Range(start, end)
-//            d.message = "${match.value} is all uppercase."
-//            d.source = "ex"
-//            diagnostics.add(d)
-//        }
-//    }
-//
-//    client.publishDiagnostics(PublishDiagnosticsParams(params.textDocument.uri, diagnostics))
-//}
+fun errorAllErrors(client: LanguageClient, textDocURI: String, e: CompilerError) {
+    val t = e.token
+    val start = t.relPos.start - 1
+    val end = t.relPos.end
+    val line = t.line - 1
+
+    val range = if (start >= end || start < 0)
+        Range(Position(line, 0), Position(line, 2))
+    else
+        Range(Position(line, start), Position(line, end))
+    client.info(range.toString())
+    client.info(t.toString())
+
+    val d = Diagnostic(
+        range,
+        e.noColorsMsg,
+        DiagnosticSeverity.Error,
+        t.lexeme
+    )
+
+    client.publishDiagnostics(PublishDiagnosticsParams(textDocURI, listOf(d)))
+}
 
 class NivaWorkspaceService : WorkspaceService {
     lateinit var client: LanguageClient
