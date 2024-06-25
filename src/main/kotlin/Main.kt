@@ -6,6 +6,7 @@ import main.LS
 import main.LspResult
 import main.frontend.meta.CompilerError
 import main.frontend.parser.types.ast.Expression
+import main.frontend.parser.types.ast.IdentifierExpr
 import main.frontend.parser.types.ast.KeywordMsg
 import main.frontend.parser.types.ast.VarDeclaration
 import main.onCompletion
@@ -93,9 +94,10 @@ fun onCompletion(
                         }
                     }
 
-                    // from:  to:
+                    // from: $1 to: $2
                     val constructInsertText = { kw: KeywordMsgMetaData ->
-                        kw.argTypes.joinToString(": ") { it.name } + ": "
+                        var c = 0
+                        kw.argTypes.joinToString(" ") { c++; it.name + ": \$$c"}
                     }
 
 
@@ -108,17 +110,55 @@ fun onCompletion(
                             it.documentation = Either.forLeft("Possible errors: $possibleErrors")
 
                             it.label = kw.argTypes.joinToString(" ") { x -> x.toString() } // from: Int to: String
+                            it.insertTextFormat = InsertTextFormat.Snippet
                             it.insertText = pipeIfNeeded + constructInsertText(kw)
                         }
                     }
 
-                    completions.addAll(unaryCompletions)
-                    completions.addAll(keywordCompletions)
-                    completions.addAll(binaryCompletions)
+                    if (expr is IdentifierExpr && expr.isType) {
+                        // find custom constructors
+                        completions.addAll(protocol.staticMsgs.values.map { kw ->
+                            CompletionItem().also {
+                                it.detail = "$type -> ${kw.returnType} " + "Pkg: " + kw.pkg
+                                it.kind = CompletionItemKind.Function
+                                val errors = kw.errors
+                                val possibleErrors = if (errors != null) errors.joinToString { x -> x.name } else ""
+                                it.documentation = Either.forLeft("Possible errors: $possibleErrors")
+
+                                if (kw is KeywordMsgMetaData) {
+                                    it.label =
+                                        kw.argTypes.joinToString(" ") { x -> x.toString() } // from: Int to: String
+                                    it.insertTextFormat = InsertTextFormat.Snippet
+                                    it.insertText = pipeIfNeeded + constructInsertText(kw)
+                                } else {
+                                    it.label = kw.name
+                                    it.textEdit
+                                }
+                            }
+                        })
+
+                        if (type is Type.UserLike) {
+                            completions.add(CompletionItem().also {
+                                var c = 0
+
+                                it.label = type.fields.joinToString(" ") { x -> x.toString() }
+                                it.kind = CompletionItemKind.Constructor
+                                it.insertTextFormat = InsertTextFormat.Snippet
+                                it.insertText = type.fields.joinToString(" ") { x -> c++; x.name + ": \$$c" } //"from: $1 to: $2"
+                            })
+                        }
+
+                    } else {
+                        completions.addAll(unaryCompletions)
+                        completions.addAll(keywordCompletions)
+                        completions.addAll(binaryCompletions)
+                    }
+
+
                 }
 
                 // fields
-                if (type is Type.UserLike) {
+                if (type is Type.UserLike && !(expr is IdentifierExpr && expr.isType)) {
 //                    client.info("type of ${q.x.first} is $type, adding fields")
                     completions.addAll(type.fields.map { field ->
                         CompletionItem().also {
@@ -240,11 +280,9 @@ class NivaWorkspaceService : WorkspaceService {
     }
 
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
-//        client.info("didChangeWatchedFiles\n" + params.changes.joinToString("\n") { it.uri })
-//        this.resolveWorkspaceSymbol()
     }
 
-    fun getCurrentOpenDirectory(): String? = if (workspaces.isEmpty()) null else workspaces.first().name
+//    fun getCurrentOpenDirectory(): String? = if (workspaces.isEmpty()) null else workspaces.first().name
 
 
     override fun didChangeConfiguration(params: DidChangeConfigurationParams?) {

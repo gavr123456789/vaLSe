@@ -33,7 +33,7 @@ class NivaTextDocumentService() : TextDocumentService {
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {
                 this.typeDB = resolver.typeDB
-                client.info("did open userTypes count =  ${resolver.typeDB.userTypes.count()}")
+                client.info("did open userTypes count =  ${resolver.typeDB.userTypes}")
             }
             this.sourceChanged = params.textDocument.text
             lastPathChangedUri = params.textDocument.uri
@@ -63,7 +63,6 @@ class NivaTextDocumentService() : TextDocumentService {
 
         this.sourceChanged = sourceChanged
         this.lastPathChangedUri = params.textDocument.uri
-        client.info("2 STARS RESOLVING ON CHANGE")
         resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
     }
 }
