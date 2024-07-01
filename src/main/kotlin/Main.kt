@@ -41,24 +41,24 @@ fun onCompletion1(
 
     val line = position.position.line
     val character = position.position.character
-    client.info("onCompletion1 on $line $character")
+    client.info("onCompletion1 on  $line $character, ${sourceChanged?.slice(1..7)}")
 
-    val q = ls.onCompletion(position.textDocument.uri, line, character)
+    val lspResult = ls.onCompletion(position.textDocument.uri, line, character)
 
-    val realCompletions = onCompletion(q, client, sourceChanged, line, character, ls, lastPathChangedUri)
+    val realCompletions = onCompletion(lspResult, client, sourceChanged, line, character, ls, lastPathChangedUri)
     return realCompletions
 }
 
 fun onCompletion(
-    q: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
+    lspResult: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
     lastPathChangedUri: String?
 ): MutableList<CompletionItem> {
     val completions = mutableListOf<CompletionItem>()
 
-    when (q) {
+    when (lspResult) {
         is LspResult.Found -> {
-            client.info("LspResult.Found completion for ${q.x.first} on ${q.x.first.token.relPos}")
-            val first = q.x.first
+            client.info("LspResult.Found completion for ${lspResult.x.first} on ${lspResult.x.first.token.relPos}")
+            val first = lspResult.x.first
             val expr = if (first is VarDeclaration) first.value else first
             client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
             if (expr is Expression) {
@@ -97,7 +97,7 @@ fun onCompletion(
                     // from: $1 to: $2
                     val constructInsertText = { kw: KeywordMsgMetaData ->
                         var c = 0
-                        kw.argTypes.joinToString(" ") { c++; it.name + ": \$$c"}
+                        kw.argTypes.joinToString(" ") { c++; it.name + ": \${$c:${it.type}}"}
                     }
 
 
@@ -144,7 +144,7 @@ fun onCompletion(
                                 it.label = type.fields.joinToString(" ") { x -> x.toString() }
                                 it.kind = CompletionItemKind.Constructor
                                 it.insertTextFormat = InsertTextFormat.Snippet
-                                it.insertText = type.fields.joinToString(" ") { x -> c++; x.name + ": \$$c" } //"from: $1 to: $2"
+                                it.insertText = type.fields.joinToString(" ") { x -> c++; x.name + ": \${$c:${x.type}}" } //"from: $1 to: $2"
                             })
                         }
 
@@ -187,9 +187,8 @@ fun onCompletion(
                     // insert bang and compile it with bang,
                     // so it throws with scope information from this bang
                     val textWithBang = insertTextAtPosition(sourceChanged2, line, character, "!!")
-                    client.info("NotFoundLine, START RESOLVING TO GET SCOPE")
+//                    client.info("NotFoundLine, START RESOLVING TO GET SCOPE")
                     resolveSingleFile(ls, client, lastPathChangedUri, textWithBang, false)
-//                    ls.resolveAllWithChangedFile(lastPathChangedUri, textWithBang)
                     completions.addAll(ls.completionFromScope.map { k ->
                         CompletionItem(k.key).also {
                             it.kind = CompletionItemKind.Variable
@@ -199,9 +198,9 @@ fun onCompletion(
                 }
             }
 
-            val st = q.x.first
-            val scope = q.x.second
-            client.info("LspResult.NotFoundLine looking for scope st = $st, scope = $scope")
+//            val st = q.x.first
+//            val scope = q.x.second
+//            client.info("LspResult.NotFoundLine looking for scope st = $st, scope = $scope")
         }
 
         is LspResult.NotFoundFile -> {
@@ -242,7 +241,7 @@ fun insertTextAtPosition(text: String, row: Int, column: Int, insertText: String
 
 
 // https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#adding-a-simple-validation
-fun errorAllErrors(client: LanguageClient, textDocURI: String, e: CompilerError) {
+fun showLastError(client: LanguageClient, textDocURI: String, e: CompilerError) {
     val t = e.token
     val start = t.relPos.start - 1
     val end = t.relPos.end
@@ -272,7 +271,7 @@ class NivaWorkspaceService : WorkspaceService {
 
     override fun didChangeWorkspaceFolders(params: DidChangeWorkspaceFoldersParams) {
         val event = params.event
-        client.info("didChangeWorkspaceFolders $event")
+//        client.info("didChangeWorkspaceFolders $event")
         val added = event.added
         val removed = event.removed
         this.workspaces.addAll(added)
