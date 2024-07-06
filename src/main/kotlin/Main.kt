@@ -41,7 +41,7 @@ fun onCompletion1(
 
     val line = position.position.line
     val character = position.position.character
-    client.info("onCompletion1 on  $line $character, ${sourceChanged?.slice(1..7)}")
+    client.info("onCompletion1 on  $line $character")
 
     val lspResult = ls.onCompletion(position.textDocument.uri, line, character)
 
@@ -97,7 +97,7 @@ fun onCompletion(
                     // from: $1 to: $2
                     val constructInsertText = { kw: KeywordMsgMetaData ->
                         var c = 0
-                        kw.argTypes.joinToString(" ") { c++; it.name + ": \${$c:${it.type}}"}
+                        kw.argTypes.joinToString(" ") { c++; it.name + ": \${$c:${it.type}}" }
                     }
 
 
@@ -144,7 +144,8 @@ fun onCompletion(
                                 it.label = type.fields.joinToString(" ") { x -> x.toString() }
                                 it.kind = CompletionItemKind.Constructor
                                 it.insertTextFormat = InsertTextFormat.Snippet
-                                it.insertText = type.fields.joinToString(" ") { x -> c++; x.name + ": \${$c:${x.type}}" } //"from: $1 to: $2"
+                                it.insertText =
+                                    type.fields.joinToString(" ") { x -> c++; x.name + ": \${$c:${x.type}}" } //"from: $1 to: $2"
                             })
                         }
 
@@ -181,22 +182,31 @@ fun onCompletion(
         }
 
         is LspResult.NotFoundLine -> {
-//            client.info("sourceChanged == null is ${sourceChanged == null}")
-            sourceChanged?.let { sourceChanged2 ->
-                lastPathChangedUri?.let { lastPathChangedUri ->
-                    // insert bang and compile it with bang,
-                    // so it throws with scope information from this bang
-                    val textWithBang = insertTextAtPosition(sourceChanged2, line, character, "!!")
+            client.info("LspResult.NotFoundLine")
+            if (lspResult.x.second.isNotEmpty()) {
+                completions.addAll(lspResult.x.second.map { k ->
+                    CompletionItem(k.key).also {
+                        it.kind = CompletionItemKind.Variable
+                        it.detail = k.value.toString()
+                    }
+                })
+            } else
+                sourceChanged?.let { sourceChanged2 ->
+                    lastPathChangedUri?.let { lastPathChangedUri ->
+                        // insert bang and compile it with bang,
+                        // so it throws with scope information from this bang
+                        val textWithBang = insertTextAtPosition(sourceChanged2, line, character, "!!")
 //                    client.info("NotFoundLine, START RESOLVING TO GET SCOPE")
-                    resolveSingleFile(ls, client, lastPathChangedUri, textWithBang, false)
-                    completions.addAll(ls.completionFromScope.map { k ->
-                        CompletionItem(k.key).also {
-                            it.kind = CompletionItemKind.Variable
-                            it.detail = k.value.toString()
-                        }
-                    })
+                        resolveSingleFile(ls, client, lastPathChangedUri, textWithBang, false)
+
+                        completions.addAll(ls.completionFromScope.map { k ->
+                            CompletionItem(k.key).also {
+                                it.kind = CompletionItemKind.Variable
+                                it.detail = k.value.toString()
+                            }
+                        })
+                    }
                 }
-            }
 
 //            val st = q.x.first
 //            val scope = q.x.second

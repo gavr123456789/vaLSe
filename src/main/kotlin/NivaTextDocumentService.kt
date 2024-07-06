@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture
 
 class NivaTextDocumentService() : TextDocumentService {
     lateinit var client: LanguageClient
-     val ls = LS { client.info("Niva LS: $it") }
+    val ls = LS { client.info("Niva LS: $it") }
     private var typeDB: TypeDB? = null
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null
@@ -32,7 +32,10 @@ class NivaTextDocumentService() : TextDocumentService {
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
         client.info("didOpen")
-        didOpen(params.textDocument.uri, params.textDocument.text)
+        if (compiledAllFiles == false) {
+            didOpen(params.textDocument.uri, params.textDocument.text)
+        }
+
     }
 
     fun didOpen(textDocumentUri: String, textDocumentText: String) {
@@ -43,7 +46,7 @@ class NivaTextDocumentService() : TextDocumentService {
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {
                 this.typeDB = resolver.typeDB
-                client.info("did open userTypes =  ${resolver.typeDB.userTypes}")
+                client.info("did open userTypes =  ${resolver.typeDB.userTypes.keys}")
             }
             this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
@@ -58,6 +61,7 @@ class NivaTextDocumentService() : TextDocumentService {
             if (textDocumentUri.contains(e.token.file.name.toString()))
                 showLastError(client, textDocumentUri, e)
         }
+
     }
 
     override fun didSave(params: DidSaveTextDocumentParams) {
