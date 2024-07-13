@@ -2,6 +2,7 @@ package org.example
 
 import frontend.resolver.TypeDB
 import main.LS
+import main.OnCompletionException
 import main.frontend.meta.CompilerError
 import main.frontend.meta.removeColors
 import main.resolveAll
@@ -10,6 +11,7 @@ import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.TextDocumentService
+import org.example.functions.onDefinition
 import java.util.concurrent.CompletableFuture
 
 class NivaTextDocumentService() : TextDocumentService {
@@ -18,9 +20,7 @@ class NivaTextDocumentService() : TextDocumentService {
     private var typeDB: TypeDB? = null
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null
-    var lock: Boolean = false
     var compiledAllFiles: Boolean = false
-    var lastError: CompilerError? = null
 
 
     override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
@@ -38,28 +38,52 @@ class NivaTextDocumentService() : TextDocumentService {
 
     }
 
+    override fun definition(params: DefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
+        client.info("This is definition CALL with $params")
+        val result = onDefinition(ls, client, params.textDocument.uri, params.position)
+        return CompletableFuture.completedFuture(Either.forRight(result))
+    }
+
+    override fun documentLink(params: DocumentLinkParams): CompletableFuture<List<DocumentLink>> {
+        client.info("This is documentLink CALL with $params")
+        val q = DocumentLink().also {
+            it.tooltip = "tooltip text from niva server"
+            it.range = Range(Position(0, 3), Position(0, 6))
+        }
+        return CompletableFuture.completedFuture(listOf(q))
+//        return super.documentLink(params)
+    }
+
+    override fun typeDefinition(params: TypeDefinitionParams?): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
+        client.info("This is typeDefinition CALL with $params")
+
+        return super.typeDefinition(params)
+    }
+
     fun didOpen(textDocumentUri: String, textDocumentText: String) {
         try {
+            client.info("1111 didOpen")
+
             val resolver = ls.resolveAll(textDocumentUri)
-            client.info("all resolved")
+            client.info("2222 all files resolved")
 
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {
                 this.typeDB = resolver.typeDB
-                client.info("did open userTypes =  ${resolver.typeDB.userTypes.keys}")
+//                client.info("did open userTypes =  ${resolver.typeDB.userTypes.keys}")
             }
             this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
             compiledAllFiles = true
 
         } catch (e: CompilerError) {
-            client.info("SERVER CompilerError e = ${e.message?.removeColors()}")
+            client.info("2222 CompilerError = ${e.message?.removeColors()}")
 
-            lastError = e
             compiledAllFiles = false
 
+            // show error only in right files
             if (textDocumentUri.contains(e.token.file.name.toString()))
-                showLastError(client, textDocumentUri, e)
+                showError(client, textDocumentUri, e.token, e.noColorsMsg)
         }
 
     }
@@ -75,10 +99,6 @@ class NivaTextDocumentService() : TextDocumentService {
     override fun didChange(params: DidChangeTextDocumentParams) {
         client.info("didChange")
 
-        while (lock) {
-            client.info("LOCKED")
-        }
-
         val sourceChanged = params.contentChanges.first().text
 
         this.sourceChanged = sourceChanged
@@ -86,6 +106,7 @@ class NivaTextDocumentService() : TextDocumentService {
         if (compiledAllFiles)
             resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
         else {
+            client.info("not all files resolved, so trying to resolve everything again")
             didOpen(params.textDocument.uri, sourceChanged)
         }
     }
@@ -94,25 +115,24 @@ class NivaTextDocumentService() : TextDocumentService {
 fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
 
     try {
-//        lock = true
-//        ls.megaStore.data.clear()// не надо клирить всю дату
-//        ls.megaStore.data.remove(File(URI(uri)).path)
-
-//        val mark = TimeSource.Monotonic.markNow()
-
-        client.info("resolveSingleFile")
-
+        client.info("1111 resolveSingleFile")
         ls.resolveAllWithChangedFile(uri, sourceChanged)
-//        client.info("resolved in ${mark.elapsedNow()}")
-
         client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
+        client.info("2222 RESOLVED NO ERRORS")
 
-    } catch (e: CompilerError) {
-        client.info("SERVER22 Compiler error e = ${e.message?.removeColors()}")
-        if (needShowErrors) {
-            showLastError(client, uri, e)
+    } catch (e: OnCompletionException) {
+        client.info("2222 OnCompletionException ${e.scope}")
+        ls.completionFromScope = e.scope
+        val errorMessage = e.errorMessage
+        val token = e.token
+        if (needShowErrors && errorMessage != null && token != null) {
+            showError(client, uri, token, errorMessage)
         }
-    } finally {
-//        lock = false
+    }
+    catch (e: CompilerError) {
+        client.info("2222 Compiler error e = ${e.message?.removeColors()}")
+        if (needShowErrors) {
+            showError(client, uri, e.token, e.noColorsMsg)
+        }
     }
 }

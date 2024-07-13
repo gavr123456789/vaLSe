@@ -18,6 +18,10 @@ class NivaServer : LanguageServer, LanguageClientAware {
         capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
         capabilities.completionProvider = CompletionOptions()
         capabilities.workspace = WorkspaceServerCapabilities()
+//        capabilities.documentLinkProvider = DocumentLinkOptions() // this is links with
+        capabilities.definitionProvider = Either.forLeft(true)
+//        capabilities.declarationProvider = Either.forLeft(true)
+//        capabilities.typeDefinitionProvider = Either.forLeft(true)
 
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
