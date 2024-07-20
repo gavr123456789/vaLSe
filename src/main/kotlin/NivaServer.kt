@@ -17,14 +17,24 @@ class NivaServer : LanguageServer, LanguageClientAware {
 
         capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
         capabilities.completionProvider = CompletionOptions()
-        capabilities.workspace = WorkspaceServerCapabilities()
-//        capabilities.documentLinkProvider = DocumentLinkOptions() // this is links with
         capabilities.definitionProvider = Either.forLeft(true)
+        capabilities.hoverProvider = Either.forLeft(true)
+        capabilities.documentSymbolProvider = Either.forLeft(true)
+        capabilities.workspace = WorkspaceServerCapabilities(WorkspaceFoldersOptions())
+//        capabilities.workspaceSymbolProvider = Either.forRight(WorkspaceSymbolOptions(true))
+
+//        capabilities.wor
+//        capabilities.typeHierarchyProvider = Either.forLeft(true)
 //        capabilities.declarationProvider = Either.forLeft(true)
 //        capabilities.typeDefinitionProvider = Either.forLeft(true)
 
-
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
+    }
+
+
+
+    override fun setTrace(params: SetTraceParams) {
+//        textDocumentService?.client?.info("$params")
     }
 
     // https://microsoft.github.io/language-server-protocol/specification#shutdown

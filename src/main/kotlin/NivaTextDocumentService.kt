@@ -12,6 +12,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.example.functions.onDefinition
+import org.example.functions.onHover
+import org.example.functions.onSymbol
 import java.util.concurrent.CompletableFuture
 
 class NivaTextDocumentService() : TextDocumentService {
@@ -21,6 +23,11 @@ class NivaTextDocumentService() : TextDocumentService {
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null
     var compiledAllFiles: Boolean = false
+
+    override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> {
+        val r = onSymbol(ls, client, params)
+        return CompletableFuture.completedFuture(r.map { Either.forRight(it) })
+    }
 
 
     override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
@@ -44,14 +51,10 @@ class NivaTextDocumentService() : TextDocumentService {
         return CompletableFuture.completedFuture(Either.forRight(result))
     }
 
-    override fun documentLink(params: DocumentLinkParams): CompletableFuture<List<DocumentLink>> {
-        client.info("This is documentLink CALL with $params")
-        val q = DocumentLink().also {
-            it.tooltip = "tooltip text from niva server"
-            it.range = Range(Position(0, 3), Position(0, 6))
-        }
-        return CompletableFuture.completedFuture(listOf(q))
-//        return super.documentLink(params)
+    override fun hover(params: HoverParams): CompletableFuture<Hover?> {
+        val result = onHover(ls, client, params)
+            ?: return CompletableFuture.completedFuture(null)
+        return CompletableFuture.completedFuture(result)
     }
 
     override fun typeDefinition(params: TypeDefinitionParams?): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
