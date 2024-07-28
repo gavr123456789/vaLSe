@@ -34,12 +34,14 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
             when (it) {
                 is VarDeclaration -> {
                     val docText = extractDocComment(it.value.type!!)
+                    ls.info?.let { it1 -> it1("onhover ${it}\n ${it.token.relPos}") }
                     return createHover(it.token, it.value.type!!.toString() + docText)
                 }
 
                 is Expression -> {
                     val type = it.type!!
                     val docText = extractDocComment(type)
+                    ls.info?.let { it1 -> it1("onhover ${it}\n ${it.token.relPos}") }
                     return createHover(it.token, type.toString() + docText)
                 }
 //                is MessageDeclaration -> {

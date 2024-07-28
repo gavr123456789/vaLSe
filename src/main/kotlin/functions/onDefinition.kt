@@ -36,7 +36,8 @@ fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Se
 //    client.info("uri = $uri \n\nabsolutePath = \"$absolutePath\" \n\nls.megaStore.data = ${ls.megaStore.data.keys}")
 //    client.info("file found")
 
-    val lineOfStatements = lineToSetOfStatements[position.line + 1] // + 1 since we are count lines from 1 and vsc from 0
+    val lineOfStatements =
+        lineToSetOfStatements[position.line + 1] // + 1 since we are count lines from 1 and vsc from 0
     if (lineOfStatements == null) {
         client.info("there are no expr on line (${position.line}), known lines are: ${lineToSetOfStatements.keys}")
         return emptySequence()
@@ -67,14 +68,28 @@ fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Se
             val onTheFirstLine = position.line == it.token.line - 1
             val onTheLastLine = position.line == it.token.lineEnd - 1
 
-            val result = (!isItMultilineTok && relPos.start <= cursorPos && cursorPos <= relPos.end) ||
-                    (isItMultilineTok && (onTheFirstLine && cursorPos >= relPos.start)) ||
-                    (onTheLastLine && cursorPos <= relPos.end) ||
-                    (inBetween)
 
-//                        client.info("tok = $it\nrelPos = ${it.token.relPos}\nlineEnd = ${it.token.lineEnd}\ncursorPos to find: ${cursorPos}\nresult = $result\nisItMultilineTok = $isItMultilineTok\n" +
-//                    "(notOnTheFirstLine && cursorPos <= relPos.end) = ${(inBetween && cursorPos <= relPos.end)}\n" +
-//                    "(onTheFirstLine && cursorPos >= relPos.start) = ${(onTheFirstLine && cursorPos >= relPos.start)}\n\n");
+            val multiLine =
+                isItMultilineTok &&
+                        ((onTheFirstLine && cursorPos >= relPos.start) ||
+                        (onTheLastLine && cursorPos <= relPos.end) ||
+                        (inBetween))
+            val singleLine = !isItMultilineTok &&
+                    relPos.start <= cursorPos && cursorPos <= relPos.end
+
+            val result = multiLine || singleLine
+
+//            client.info(
+//                "tok = $it\nrelPos = ${it.token.relPos}\nlineEnd = ${it.token.lineEnd}\ncursorPos to find: ${cursorPos}\nresult = $result\nisItMultilineTok = $isItMultilineTok\n" +
+//                        "(isItMultilineTok && (onTheFirstLine && cursorPos >= relPos.start)) = ${(inBetween && cursorPos <= relPos.end)}\n" +
+//                        "(onTheFirstLine && cursorPos >= relPos.start) = ${(onTheFirstLine && cursorPos >= relPos.start)}\n\n" +
+//                        "(onTheLastLine && cursorPos <= relPos.end) = ${(onTheLastLine && cursorPos <= relPos.end)}\n" +
+//                        "(inBetween) = ${(inBetween)}\n" +
+//                        "(!isItMultilineTok && relPos.start <= cursorPos && cursorPos <= relPos.end) = ${(!isItMultilineTok && relPos.start <= cursorPos && cursorPos <= relPos.end)}\n" +
+//                        "(isItMultilineTok && (onTheFirstLine && cursorPos >= relPos.start)) = ${(isItMultilineTok && (onTheFirstLine && cursorPos >= relPos.start))}\n" +
+//                        "\n"
+//            );
+//            client.info("it.token.lineEnd = ${it.token.lineEnd}\nit.token.line = ${it.token.line} ")
 
             result
         }
