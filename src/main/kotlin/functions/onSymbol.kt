@@ -21,7 +21,7 @@ fun MessageMetadata.toDocumentSymbol(): DocumentSymbol? {
 
 fun createHierarchyFromType(type: Type, token: Token, client: LanguageClient): DocumentSymbol {
 
-    val sas = token.toLspPosition()
+    val pos = token.toLspPosition()
     client.info("createHierarchyFromType from $type, from token: $token")
     val methods = type.protocols.flatMap { protocol ->
         protocol.value.unaryMsgs.mapNotNull { it.value.toDocumentSymbol() } +
@@ -29,15 +29,15 @@ fun createHierarchyFromType(type: Type, token: Token, client: LanguageClient): D
         protocol.value.keywordMsgs.mapNotNull { it.value.toDocumentSymbol() } +
         protocol.value.builders.mapNotNull { it.value.toDocumentSymbol() }
     }
-    val typeSymbol = DocumentSymbol(type.name, SymbolKind.Class, sas, sas, type.toString(), methods)
+    val typeSymbol = DocumentSymbol(type.name, SymbolKind.Class, pos, pos, type.toString(), methods)
 
     return typeSymbol
 }
 
 fun onSymbol(ls: LS, client: LanguageClient, params: DocumentSymbolParams): List<DocumentSymbol> {
-    client.info("onSymbol ${params.textDocument.uri}\n${ls.fileToDecl.keys}")
     val uriFile = File(URI(params.textDocument.uri)).toString()
-    client.info("ls.fileToDecl = ${ls.fileToDecl.keys}\nsercingFor: ${params.textDocument.uri}")
+//    client.info("onSymbol ${params.textDocument.uri}\n${ls.fileToDecl.keys}")
+//    client.info("ls.fileToDecl = ${ls.fileToDecl.keys}\nsercingFor: ${params.textDocument.uri}")
 
     ls.fileToDecl[uriFile]?.let {
         return it.filterIsInstance<SomeTypeDeclaration>().map {
@@ -47,7 +47,5 @@ fun onSymbol(ls: LS, client: LanguageClient, params: DocumentSymbolParams): List
 
     // if file doesnt contain any declarations
     return emptyList()
-
-
 
 }

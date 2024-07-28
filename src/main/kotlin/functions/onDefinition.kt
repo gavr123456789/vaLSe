@@ -38,7 +38,7 @@ fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Se
 
     val lineOfStatements = lineToSetOfStatements[position.line + 1] // + 1 since we are count lines from 1 and vsc from 0
     if (lineOfStatements == null) {
-        client.info("position.line (${position.line}) not found, known positions are: ${lineToSetOfStatements.keys}")
+        client.info("there are no expr on line (${position.line}), known lines are: ${lineToSetOfStatements.keys}")
         return emptySequence()
     }
     client.info("position.line (${position.line}) is found!")
