@@ -5,6 +5,7 @@ import frontend.resolver.Type.UserLike
 import main.LS
 import main.frontend.meta.Token
 import main.frontend.parser.types.ast.Expression
+import main.frontend.parser.types.ast.Message
 import main.frontend.parser.types.ast.VarDeclaration
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.HoverParams
@@ -21,28 +22,40 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
             setContents(MarkupContent(MarkupKind.MARKDOWN, text))
         }
     }
-    val extractDocComment = { type: Type ->
+    val extractDocCommentFromType = { type: Type ->
         if (type is UserLike) {
             type.typeDeclaration?.docComment?.let {
                 "\n\n" + it.text
-            } ?: ""
-        } else ""
+            }
+        } else null
     }
 
     newFind(ls, client, params.textDocument.uri, params.position)
         .forEach {
             when (it) {
                 is VarDeclaration -> {
-                    val docText = extractDocComment(it.value.type!!)
-                    ls.info?.let { it1 -> it1("onhover ${it}\n ${it.token.relPos}") }
+                    val docText = extractDocCommentFromType(it.value.type!!)
+                    ls.info?.let { it1 -> it1("onhover VAR DECL ${it}\n ${it.token.relPos}") }
                     return createHover(it.token, it.value.type!!.toString() + docText)
+                }
+
+                is Message -> {
+                    val type = it.type!!
+                    // if message decl has comment then add it, over-vice add type comment, shit code for a purpose
+                    val docText =
+                        (it.declaration?.let {
+                            it.docComment?.text
+                        } ?: extractDocCommentFromType(type))
+
+                    ls.info?.let { it1 -> it1("onhover MSG ${it}\n ${it.token.relPos}") }
+                    return createHover(it.token, type.toString() + if (docText != null) "\n\n$docText" else "")
                 }
 
                 is Expression -> {
                     val type = it.type!!
-                    val docText = extractDocComment(type)
-                    ls.info?.let { it1 -> it1("onhover ${it}\n ${it.token.relPos}") }
-                    return createHover(it.token, type.toString() + docText)
+                    val docText = extractDocCommentFromType(type)
+                    ls.info?.let { it1 -> it1("onhover EXPR ${it}\n ${it.token.relPos}") }
+                    return createHover(it.token, type.toString() + (docText ?: ""))
                 }
 //                is MessageDeclaration -> {
 //                    val type = it.type!!

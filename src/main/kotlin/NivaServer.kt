@@ -22,8 +22,6 @@ class NivaServer : LanguageServer, LanguageClientAware {
         capabilities.documentSymbolProvider = Either.forLeft(true)
         capabilities.workspace = WorkspaceServerCapabilities(WorkspaceFoldersOptions())
 //        capabilities.workspaceSymbolProvider = Either.forRight(WorkspaceSymbolOptions(true))
-
-//        capabilities.wor
 //        capabilities.typeHierarchyProvider = Either.forLeft(true)
 //        capabilities.declarationProvider = Either.forLeft(true)
 //        capabilities.typeDefinitionProvider = Either.forLeft(true)
