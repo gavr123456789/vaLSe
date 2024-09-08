@@ -19,7 +19,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.example.functions.toLspPosition
 
 
-fun onCompletion(
+fun createCompletionItemFromResult(
     lspResult: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
     lastPathChangedUri: String?
 ): MutableList<CompletionItem> {

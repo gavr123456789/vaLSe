@@ -32,11 +32,9 @@ fun onCompletion1(
     val line = position.position.line
     val character = position.position.character
     client.info("onCompletion1 on  $line $character")
-
     val lspResult = ls.onCompletion(position.textDocument.uri, line, character)
-
-    val realCompletions = onCompletion(lspResult, client, sourceChanged, line, character, ls, lastPathChangedUri)
-    return realCompletions
+    val completionItems = createCompletionItemFromResult(lspResult, client, sourceChanged, line, character, ls, lastPathChangedUri)
+    return completionItems
 }
 
 

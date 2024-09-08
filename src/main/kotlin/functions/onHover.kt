@@ -34,7 +34,7 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
         .forEach {
             when (it) {
                 is VarDeclaration -> {
-                    val docText = extractDocCommentFromType(it.value.type!!)
+                    val docText = extractDocCommentFromType(it.value.type!!) ?: ""
                     ls.info?.let { it1 -> it1("onhover VAR DECL ${it}\n ${it.token.relPos}") }
                     return createHover(it.token, it.value.type!!.toString() + docText)
                 }
@@ -45,26 +45,19 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
                     val docText =
                         (it.declaration?.let {
                             it.docComment?.text
-                        } ?: extractDocCommentFromType(type))
+                        } ?: extractDocCommentFromType(type)) ?: ""
 
                     ls.info?.let { it1 -> it1("onhover MSG ${it}\n ${it.token.relPos}") }
-                    return createHover(it.token, type.toString() + if (docText != null) "\n\n$docText" else "")
+                    return createHover(it.token, type.toString() + if (docText.isNotEmpty()) "\n\n$docText" else "")
                 }
 
                 is Expression -> {
                     val type = it.type!!
-                    val docText = extractDocCommentFromType(type)
+                    val docText = extractDocCommentFromType(type) ?: ""
                     ls.info?.let { it1 -> it1("onhover EXPR ${it}\n ${it.token.relPos}") }
-                    return createHover(it.token, type.toString() + (docText ?: ""))
+                    return createHover(it.token, type.toString() + docText)
                 }
-//                is MessageDeclaration -> {
-//                    val type = it.type!!
-//                    return Hover().apply {
-////                        client.info("$it\n${it.token.toLspPosition()}")
-//                        range = it.token.toLspPosition()
-//                        setContents(MarkupContent(MarkupKind.PLAINTEXT, type.toString()))
-//                    }
-//                }
+
                 else -> {}
             }
         }
