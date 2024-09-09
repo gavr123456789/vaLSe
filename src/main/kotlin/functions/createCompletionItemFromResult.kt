@@ -18,7 +18,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
 import org.example.functions.toLspPosition
 
-
 fun createCompletionItemFromResult(
     lspResult: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
     lastPathChangedUri: String?
@@ -30,12 +29,11 @@ fun createCompletionItemFromResult(
             client.info("LspResult.Found completion for ${lspResult.x.first} on ${lspResult.x.first.token.relPos}")
             val first = lspResult.x.first
             val expr = if (first is VarDeclaration) first.value else first
-            client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
+//            client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
             if (expr is Expression) {
                 val type = expr.type!!
                 val isPipeNeeded = expr is KeywordMsg && (!expr.isCascade || expr.isPiped)
                 val pipeIfNeeded = if (isPipeNeeded) "|> " else ""
-
 
                 val addDocsAndErrors = { errors: MutableSet<Type.Union>?, docComment: DocComment?, it: CompletionItem ->
                     val documentationStr = StringBuilder()
@@ -75,7 +73,6 @@ fun createCompletionItemFromResult(
                         kw.argTypes.joinToString(" ") { c++; it.name + ": \${$c:${it.type}}" }
                     }
 
-
                     val keywordCompletions = protocol.keywordMsgs.values.map { kw ->
                         CompletionItem().also {
                             it.detail = "$type -> ${kw.returnType} " + "Pkg: " + kw.pkg
@@ -110,26 +107,25 @@ fun createCompletionItemFromResult(
                                 }
                             }
                         })
-
-                        if (type is Type.UserLike) {
-                            completions.add(CompletionItem().also {
-                                var c = 0
-
-                                it.label = type.fields.joinToString(" ") { x -> x.toString() }
-                                it.kind = CompletionItemKind.Constructor
-                                it.insertTextFormat = InsertTextFormat.Snippet
-                                it.insertText =
-                                    type.fields.joinToString(" ") { x -> c++; x.name + ": \${$c:${x.type}}" } //"from: $1 to: $2"
-                            })
-                        }
-
+                        // constructor from fields
                     } else {
                         completions.addAll(unaryCompletions)
                         completions.addAll(keywordCompletions)
                         completions.addAll(binaryCompletions)
                     }
+                }
 
+                if (type is Type.UserLike) {
+                    completions.add(CompletionItem().also {
 
+                        it.label = type.fields.joinToString(" ") { x -> x.toString() }
+                        it.kind = CompletionItemKind.Constructor
+                        it.insertTextFormat = InsertTextFormat.Snippet
+
+                        var c = 0
+                        it.insertText =
+                            type.fields.joinToString(" ") { x -> c++; x.name + ": \${$c:${x.type}}" } //"from: $1 to: $2"
+                    })
                 }
 
                 // fields
