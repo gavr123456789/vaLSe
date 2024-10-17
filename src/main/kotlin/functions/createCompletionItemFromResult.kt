@@ -27,20 +27,20 @@ fun createCompletionItemFromResult(
     when (lspResult) {
         is LspResult.Found -> {
             client.info("LspResult.Found completion for ${lspResult.x.first} on ${lspResult.x.first.token.relPos}")
-            val first = lspResult.x.first
-            val expr = if (first is VarDeclaration) first.value else first
+            val st = lspResult.x.first
+            val expr = if (st is VarDeclaration) st.value else st
 //            client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
             if (expr is Expression) {
                 val type = expr.type!!
                 val isPipeNeeded = expr is KeywordMsg && (!expr.isCascade || expr.isPiped)
                 val pipeIfNeeded = if (isPipeNeeded) "|> " else ""
 
-                val addDocsAndErrors = { errors: MutableSet<Type.Union>?, docComment: DocComment?, it: CompletionItem ->
+                val addDocsAndErrors = { errors: Set<Type.Union>?, docComment: DocComment?, it: CompletionItem ->
                     val documentationStr = StringBuilder()
                     // errors
                     if (errors?.isNotEmpty() == true) {
                         val possibleErrors = errors.joinToString { it.name }
-                        documentationStr.append("Possible errors: $possibleErrors")
+                        documentationStr.appendLine("Possible errors: $possibleErrors")
                     }
                     // doc comments
                     if (docComment != null) {
@@ -51,11 +51,11 @@ fun createCompletionItemFromResult(
                     }
                 }
 
-                val createCompletionItemForUnaryBinary = { msg: MessageMetadata->
+                val createCompletionItemForUnaryBinary = { msg: MessageMetadata ->
                     CompletionItem(msg.name).also {
-                        it.detail = "$type -> ${msg.returnType} " + "Pkg: " + msg.pkg
+                        it.detail = "$type -> ${msg.returnType} " //+ "Pkg: " + msg.pkg
                         it.kind = CompletionItemKind.Function
-                        addDocsAndErrors(msg.errors, msg.declaration?.docComment, it)
+                        addDocsAndErrors(msg.errors, msg.docComment ?: msg.declaration?.docComment, it)
                     }
                 }
 
@@ -75,9 +75,9 @@ fun createCompletionItemFromResult(
 
                     val keywordCompletions = protocol.keywordMsgs.values.map { kw ->
                         CompletionItem().also {
-                            it.detail = "$type -> ${kw.returnType} " + "Pkg: " + kw.pkg
+                            it.detail = "$type -> ${kw.returnType} " //+ "Pkg: " + kw.pkg
                             it.kind = CompletionItemKind.Function
-                            addDocsAndErrors(kw.errors, kw.declaration?.docComment, it)
+                            addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
 
                             it.label = kw.argTypes.joinToString(" ") { x -> x.toString() } // from: Int to: String
                             it.insertTextFormat = InsertTextFormat.Snippet
@@ -90,11 +90,12 @@ fun createCompletionItemFromResult(
                         // find custom constructors
                         completions.addAll(protocol.staticMsgs.values.map { kw ->
                             CompletionItem().also {
-                                it.detail = "$type -> ${kw.returnType} " + "Pkg: " + kw.pkg
+                                it.detail = "$type -> ${kw.returnType} " // + "Pkg: " + kw.pkg
                                 it.kind = CompletionItemKind.Function
-                                val errors = kw.errors
-                                val possibleErrors = if (errors != null) errors.joinToString { x -> x.name } else ""
-                                it.documentation = Either.forLeft("Possible errors: $possibleErrors")
+//                                val errors = kw.errors
+//                                val possibleErrors = if (errors != null) errors.joinToString { x -> x.name } else ""
+                                addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
+                                //Either.forLeft("Possible errors: $possibleErrors")
 
                                 if (kw is KeywordMsgMetaData) {
                                     it.label =
@@ -164,7 +165,8 @@ fun createCompletionItemFromResult(
                             it.label = if (deep) "match deep" else "match"
                             it.insertText = text
                             it.additionalTextEdits = listOf(TextEdit(pos, ""))
-                        }}
+                        }
+                    }
                     completions.add(qwf(deep, true))
                     completions.add(qwf(notDeep, false))
                 }

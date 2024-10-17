@@ -43,11 +43,11 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
                     val type = it.type!!
                     // if message decl has comment then add it, over-vice add type comment, shit code for a purpose
                     val docText =
-                        (it.declaration?.let {
-                            it.docComment?.text
-                        } ?: extractDocCommentFromType(type)) ?: ""
+                        (it.declaration?.docComment?.text
+                            ?: it.msgMetaData?.docComment?.text
+                            ?: extractDocCommentFromType(type)) ?: ""
 
-                    ls.info?.let { it1 -> it1("onhover MSG ${it}\n ${it.token.relPos}") }
+                    ls.info?.let { it1 -> it1("onhover MSG ${it}\n ${it.token.relPos} \n ${it.msgMetaData}") }
                     return createHover(it.token, type.toString() + if (docText.isNotEmpty()) "\n\n$docText" else "")
                 }
 
