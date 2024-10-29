@@ -51,20 +51,23 @@ fun createCompletionItemFromResult(
                     }
                 }
 
-                val createCompletionItemForUnaryBinary = { msg: MessageMetadata ->
+                val createCompletionItemForUnaryBinary = { msg: MessageMetadata, protocol: String ->
                     CompletionItem(msg.name).also {
                         it.detail = "$type -> ${msg.returnType} " //+ "Pkg: " + msg.pkg
                         it.kind = CompletionItemKind.Function
+                        it.sortText = protocol
+//                        it.filterText = protocol
+//                        it.detail = protocol
                         addDocsAndErrors(msg.errors, msg.docComment ?: msg.declaration?.docComment, it)
                     }
                 }
 
                 type.protocols.values.forEach { protocol ->
                     val unaryCompletions = protocol.unaryMsgs.values.map { unary ->
-                        createCompletionItemForUnaryBinary(unary)
+                        createCompletionItemForUnaryBinary(unary, protocol.name)
                     }
                     val binaryCompletions = protocol.binaryMsgs.values.map { binary ->
-                        createCompletionItemForUnaryBinary(binary)
+                        createCompletionItemForUnaryBinary(binary, protocol.name)
                     }
 
                     // creating a: ${1:Int} b: ${2:Int} c: ${0:Int}
@@ -83,7 +86,7 @@ fun createCompletionItemFromResult(
                             it.detail = "$type -> ${kw.returnType} " //+ "Pkg: " + kw.pkg
                             it.kind = CompletionItemKind.Function
                             it.insertTextFormat = InsertTextFormat.Snippet
-
+                            it.sortText = protocol.name
                             addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
 
                             val label = kw.argTypes.joinToString(" ") { x -> x.toString() }
