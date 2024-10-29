@@ -26,8 +26,8 @@ fun createCompletionItemFromResult(
 
     when (lspResult) {
         is LspResult.Found -> {
-            client.info("LspResult.Found completion for ${lspResult.x.first} on ${lspResult.x.first.token.relPos}")
-            val st = lspResult.x.first
+            client.info("LspResult.Found completion for ${lspResult.statement} on ${lspResult.statement.token.relPos}")
+            val st = lspResult.statement
             val expr = if (st is VarDeclaration) st.value else st
 //            client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
             if (expr is Expression) {
@@ -67,21 +67,40 @@ fun createCompletionItemFromResult(
                         createCompletionItemForUnaryBinary(binary)
                     }
 
-                    // from: $1 to: $2
+                    // creating a: ${1:Int} b: ${2:Int} c: ${0:Int}
+                    // last must be 0 because it's an end of snippet signal https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#snippet_syntax
                     val constructInsertText = { kw: KeywordMsgMetaData ->
                         var c = 0
-                        kw.argTypes.joinToString(" ") { c++; it.name + ": \${$c:${it.type}}" }
+                        kw.argTypes.joinToString(" ") {
+                            c++
+                            val cc = if (c == kw.argTypes.count()) 0 else c
+                            it.name + ": \${$cc:${it.type}}"
+                        }
                     }
 
                     val keywordCompletions = protocol.keywordMsgs.values.map { kw ->
                         CompletionItem().also {
                             it.detail = "$type -> ${kw.returnType} " //+ "Pkg: " + kw.pkg
                             it.kind = CompletionItemKind.Function
+                            it.insertTextFormat = InsertTextFormat.Snippet
+
                             addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
 
-                            it.label = kw.argTypes.joinToString(" ") { x -> x.toString() } // from: Int to: String
-                            it.insertTextFormat = InsertTextFormat.Snippet
-                            it.insertText = pipeIfNeeded + constructInsertText(kw)
+                            val label = kw.argTypes.joinToString(" ") { x -> x.toString() }
+                            it.label = label // from: Int to: String
+
+                            val insertText = pipeIfNeeded + constructInsertText(kw)
+                            it.insertText = insertText
+                            if (lspResult.needBraceWrap ) {
+                                val pos = expr.token.toLspPosition()
+                                pos.end.character = pos.start.character
+
+//                                val endPos = pos.end.character + label.count()
+//                                val posEnd = Range(Position(pos.start.line, endPos), Position(pos.start.line, endPos))
+                                it.insertText = it.insertText + ")"
+//                                client.info("\n$insertText\n$pos\n$posEnd\n")
+                                it.additionalTextEdits = listOf(TextEdit(pos, "(")) //
+                            }
                         }
                     }
 
@@ -159,7 +178,7 @@ fun createCompletionItemFromResult(
                     // collect all union branches
                     val deep = type.stringAllBranches(expr.name, deep = true)
                     val notDeep = type.stringAllBranches(expr.name, deep = false)
-                    val qwf = { text: String, deep: Boolean ->
+                    val complItem = { text: String, deep: Boolean ->
                         CompletionItem().also {
                             it.kind = CompletionItemKind.Snippet
                             it.label = if (deep) "match deep" else "match"
@@ -167,8 +186,10 @@ fun createCompletionItemFromResult(
                             it.additionalTextEdits = listOf(TextEdit(pos, ""))
                         }
                     }
-                    completions.add(qwf(deep, true))
-                    completions.add(qwf(notDeep, false))
+                    client.info("expr = $expr\ndeep replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
+
+                    completions.add(complItem(deep, true))
+                    completions.add(complItem(notDeep, false))
                 }
             }
         }
