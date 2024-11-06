@@ -15,6 +15,7 @@ import org.example.functions.onDefinition
 import org.example.functions.onHover
 import org.example.functions.onSymbol
 import java.util.concurrent.CompletableFuture
+import kotlin.time.measureTime
 
 class NivaTextDocumentService() : TextDocumentService {
     lateinit var client: LanguageClient
@@ -65,7 +66,7 @@ class NivaTextDocumentService() : TextDocumentService {
 
     fun didOpen(textDocumentUri: String, textDocumentText: String) {
         try {
-            client.info("1111 didOpen")
+//            client.info("1111 didOpen")
 
             val resolver = ls.resolveAll(textDocumentUri)
             client.info("2222 all files resolved")
@@ -100,18 +101,27 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun didChange(params: DidChangeTextDocumentParams) {
-        client.info("didChange")
+//        client.info("didChange")
 
         val sourceChanged = params.contentChanges.first().text
 
         this.sourceChanged = sourceChanged
         this.lastPathChangedUri = params.textDocument.uri
-        if (compiledAllFiles)
-            resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
-        else {
-            client.info("not all files resolved, so trying to resolve everything again")
+        val fullCompTime = measureTime {
             didOpen(params.textDocument.uri, sourceChanged)
         }
+
+//        val fullCompTime = measureTime {
+//            if (compiledAllFiles)
+//                resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
+//            else {
+//                client.info("not all files resolved, so trying to resolve everything again")
+//
+//                didOpen(params.textDocument.uri, sourceChanged)
+//            }
+//        }
+        client.info("fullCompTime is $fullCompTime")
+
     }
 }
 
@@ -131,8 +141,7 @@ fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged
         if (needShowErrors && errorMessage != null && token != null) {
             showError(client, uri, token, errorMessage)
         }
-    }
-    catch (e: CompilerError) {
+    } catch (e: CompilerError) {
         client.info("2222 Compiler error e = ${e.message?.removeColors()}")
         if (needShowErrors) {
             showError(client, uri, e.token, e.noColorsMsg)
