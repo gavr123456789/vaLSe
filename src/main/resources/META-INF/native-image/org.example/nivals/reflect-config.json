@@ -1,24 +1,5 @@
 [
 {
-  "name":"org.eclipse.lsp4j.services.LanguageClient",
-  "allDeclaredFields":true,
-  "allDeclaredConstructors":true,
-  "allPublicMethods":true,
-  "allDeclaredMethods":true
-},
-{
-  "name":"org.eclipse.lsp4j.services.LanguageClientAware",
-  "allDeclaredMethods":true
-},
-{
-  "name":"org.eclipse.lsp4j.jsonrpc.Endpoint",
-  "allDeclaredFields":true,
-  "allDeclaredConstructors":true,
-  "allPublicMethods":true,
-  "allDeclaredMethods":true
-},
-
-{
   "name":"java.lang.Class",
   "allPublicMethods":true
 },

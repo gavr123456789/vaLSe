@@ -107,8 +107,16 @@ class NivaTextDocumentService() : TextDocumentService {
 
         this.sourceChanged = sourceChanged
         this.lastPathChangedUri = params.textDocument.uri
+//        val fullCompTime = measureTime {
+//            didOpen(params.textDocument.uri, sourceChanged)
+//        }
         val fullCompTime = measureTime {
-            didOpen(params.textDocument.uri, sourceChanged)
+            if (compiledAllFiles)
+                resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
+            else {
+                client.info("not all files resolved, so trying to resolve everything again")
+                didOpen(params.textDocument.uri, sourceChanged)
+            }
         }
 
 //        val fullCompTime = measureTime {
