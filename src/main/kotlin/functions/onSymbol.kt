@@ -34,7 +34,8 @@ fun createHierarchyFromType(type: Type, token: Token, client: LanguageClient): D
     return typeSymbol
 }
 
-fun onSymbol(ls: LS, client: LanguageClient, params: DocumentSymbolParams): List<DocumentSymbol> {
+fun documentSymbol(ls: LS, client: LanguageClient, params: DocumentSymbolParams): List<DocumentSymbol> {
+//    client.info("| URIING the ${params.textDocument.uri}")
     val uriFile = File(URI(params.textDocument.uri)).toString()
 //    client.info("onSymbol ${params.textDocument.uri}\n${ls.fileToDecl.keys}")
 //    client.info("ls.fileToDecl = ${ls.fileToDecl.keys}\nsercingFor: ${params.textDocument.uri}")

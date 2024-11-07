@@ -14,7 +14,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.example.functions.onDefinition
 import org.example.functions.onHover
-import org.example.functions.onSymbol
+import org.example.functions.documentSymbol
 import java.util.concurrent.CompletableFuture
 import kotlin.time.measureTime
 
@@ -27,7 +27,7 @@ class NivaTextDocumentService() : TextDocumentService {
     var compiledAllFiles: Boolean = false
 
     override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> {
-        val r = onSymbol(ls, client, params)
+        val r = documentSymbol(ls, client, params)
         return CompletableFuture.completedFuture(r.map { Either.forRight(it) })
     }
 
@@ -77,7 +77,7 @@ class NivaTextDocumentService() : TextDocumentService {
             }
             this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
-            compiledAllFiles = true
+            compiledAllFiles = true // we need that because opening a new file will thiger did open again
 
         } catch (e: CompilerError) {
             client.info("2222 CompilerError = ${e.message?.removeColors()}")
@@ -150,16 +150,12 @@ class NivaTextDocumentService() : TextDocumentService {
 //}
 
 fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
-
     try {
         client.info("1111 resolveNonIncremental uri=$uri")
 //        ls.resolveIncremental(uri, sourceChanged)
         ls.resolver = ls.resolveNonIncremental(uri, sourceChanged)
-//        this.sourceChanged = sourceChanged
-//        lastPathChangedUri = textDocumentUri
-        client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
+        clearErrors(client, uri)
         client.info("2222 RESOLVED NO ERRORS")
-
     } catch (e: OnCompletionException) {
         client.info("2222 OnCompletionException ${e.scope}, ${e.errorMessage}")
         client.info("userTypes.count = ${ls.resolver.typeDB.userTypes.keys}")

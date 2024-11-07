@@ -9,6 +9,10 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.services.LanguageClient
 
 
+fun clearErrors(client: LanguageClient, textDocURI: String) {
+    client.publishDiagnostics(PublishDiagnosticsParams(textDocURI, listOf()))
+}
+
 fun showError(client: LanguageClient, textDocURI: String, t: Token, message: String) {
     val start = t.relPos.start - 1
     val end = t.relPos.end
