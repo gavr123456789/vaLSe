@@ -68,7 +68,7 @@ class NivaTextDocumentService() : TextDocumentService {
     fun didOpen(textDocumentUri: String, textDocumentText: String) {
         try {
             client.info("1111 didOpen resolve all")
-            val resolver = ls.resolveAllFirstTime(textDocumentUri)
+            val resolver = ls.resolveAllFirstTime(textDocumentUri, true)
             client.info("2222 all files resolved")
 
             @Suppress("SENSELESS_COMPARISON")
@@ -169,7 +169,7 @@ fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged
         if (needShowErrors && errorMessage != null && token != null) {
             showError(client, uri, token, errorMessage)
         }
-        throw e
+//        throw e
     } catch (e: CompilerError) {
         client.info("2222 Compiler error e = ${e.message?.removeColors()}")
         if (needShowErrors) {
