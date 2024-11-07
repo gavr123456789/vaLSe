@@ -1,11 +1,11 @@
 package org.example.functions
 
 import frontend.resolver.Type
-import main.LS
 import main.frontend.meta.Token
 import main.frontend.parser.types.ast.IdentifierExpr
 import main.frontend.parser.types.ast.Message
 import main.frontend.parser.types.ast.Statement
+import main.languageServer.LS
 import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range

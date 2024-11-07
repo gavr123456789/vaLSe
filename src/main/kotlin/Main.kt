@@ -1,7 +1,7 @@
 package org.example
 
-import main.LS
-import main.onCompletion
+import main.languageServer.LS
+import main.languageServer.onCompletion
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient

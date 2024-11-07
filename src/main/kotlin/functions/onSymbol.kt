@@ -2,9 +2,9 @@ package org.example.functions
 
 import frontend.resolver.MessageMetadata
 import frontend.resolver.Type
-import main.LS
 import main.frontend.meta.Token
 import main.frontend.parser.types.ast.SomeTypeDeclaration
+import main.languageServer.LS
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.SymbolKind

@@ -2,11 +2,11 @@ package org.example.functions
 
 import frontend.resolver.Type
 import frontend.resolver.Type.UserLike
-import main.LS
 import main.frontend.meta.Token
 import main.frontend.parser.types.ast.Expression
 import main.frontend.parser.types.ast.Message
 import main.frontend.parser.types.ast.VarDeclaration
+import main.languageServer.LS
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.MarkupContent

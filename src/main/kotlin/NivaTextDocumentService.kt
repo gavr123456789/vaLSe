@@ -1,12 +1,13 @@
 package org.example
 
 import frontend.resolver.TypeDB
-import main.LS
-import main.OnCompletionException
 import main.frontend.meta.CompilerError
 import main.frontend.meta.removeColors
-import main.resolveAll
-import main.resolveAllWithChangedFile
+import main.languageServer.LS
+import main.languageServer.OnCompletionException
+import main.languageServer.resolveAll
+import main.languageServer.resolveIncremental
+
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
@@ -66,15 +67,13 @@ class NivaTextDocumentService() : TextDocumentService {
 
     fun didOpen(textDocumentUri: String, textDocumentText: String) {
         try {
-//            client.info("1111 didOpen")
-
+            client.info("1111 didOpen resolve all")
             val resolver = ls.resolveAll(textDocumentUri)
             client.info("2222 all files resolved")
 
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {
                 this.typeDB = resolver.typeDB
-//                client.info("did open userTypes =  ${resolver.typeDB.userTypes.keys}")
             }
             this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
@@ -110,6 +109,7 @@ class NivaTextDocumentService() : TextDocumentService {
 //        val fullCompTime = measureTime {
 //            didOpen(params.textDocument.uri, sourceChanged)
 //        }
+
         val fullCompTime = measureTime {
             if (compiledAllFiles)
                 resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
@@ -119,26 +119,43 @@ class NivaTextDocumentService() : TextDocumentService {
             }
         }
 
-//        val fullCompTime = measureTime {
-//            if (compiledAllFiles)
-//                resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
-//            else {
-//                client.info("not all files resolved, so trying to resolve everything again")
-//
-//                didOpen(params.textDocument.uri, sourceChanged)
-//            }
-//        }
         client.info("fullCompTime is $fullCompTime")
 
     }
 }
+//
+//fun resolveAllFiles(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
+//
+//    try {
+//        client.info("1111 resolveSingleFile")
+//        ls.resolveIncremental(uri, sourceChanged)
+//        client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
+////        client.refreshDiagnostics()
+//        client.info("2222 RESOLVED NO ERRORS")
+//
+//    } catch (e: OnCompletionException) {
+//        client.info("2222 OnCompletionException ${e.scope}")
+//        ls.completionFromScope = e.scope
+//        val errorMessage = e.errorMessage
+//        val token = e.token
+//        if (needShowErrors && errorMessage != null && token != null) {
+//            showError(client, uri, token, errorMessage)
+//        }
+//    } catch (e: CompilerError) {
+//        client.info("2222 Compiler error e = ${e.message?.removeColors()}")
+//        if (needShowErrors) {
+//            showError(client, uri, e.token, e.noColorsMsg)
+//        }
+//    }
+//}
 
 fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
 
     try {
         client.info("1111 resolveSingleFile")
-        ls.resolveAllWithChangedFile(uri, sourceChanged)
+        ls.resolveIncremental(uri, sourceChanged)
         client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
+//        client.refreshDiagnostics()
         client.info("2222 RESOLVED NO ERRORS")
 
     } catch (e: OnCompletionException) {

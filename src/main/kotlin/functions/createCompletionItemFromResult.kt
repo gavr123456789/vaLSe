@@ -3,13 +3,13 @@ package org.example
 import frontend.resolver.KeywordMsgMetaData
 import frontend.resolver.MessageMetadata
 import frontend.resolver.Type
-import main.LS
-import main.LspResult
 import main.frontend.parser.types.ast.DocComment
 import main.frontend.parser.types.ast.Expression
 import main.frontend.parser.types.ast.IdentifierExpr
 import main.frontend.parser.types.ast.KeywordMsg
 import main.frontend.parser.types.ast.VarDeclaration
+import main.languageServer.LS
+import main.languageServer.LspResult
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat

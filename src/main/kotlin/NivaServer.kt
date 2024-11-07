@@ -12,7 +12,7 @@ class NivaServer : LanguageServer, LanguageClientAware {
     private val textDocumentService = NivaTextDocumentService()
 
     // https://microsoft.github.io/language-server-protocol/specification#initialize
-    override fun initialize(params: InitializeParams?): CompletableFuture<InitializeResult>? {
+    override fun initialize(params: InitializeParams?): CompletableFuture<InitializeResult> {
         val capabilities = ServerCapabilities()
 
         capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
@@ -28,7 +28,6 @@ class NivaServer : LanguageServer, LanguageClientAware {
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
     }
-
 
 
     override fun setTrace(params: SetTraceParams) {
@@ -54,11 +53,13 @@ class NivaServer : LanguageServer, LanguageClientAware {
         return workspaceService
     }
 
-    override fun connect(client: LanguageClient) {
+    override fun initialized(params: InitializedParams?) {
+        super.initialized(params)
+    }
 
+    override fun connect(client: LanguageClient) {
         textDocumentService.client = client
         workspaceService.client = client
-
 
         client.info("Hallo from niva Server!")
     }
