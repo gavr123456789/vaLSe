@@ -5,8 +5,8 @@ import main.frontend.meta.CompilerError
 import main.frontend.meta.removeColors
 import main.languageServer.LS
 import main.languageServer.OnCompletionException
-import main.languageServer.resolveAll
-import main.languageServer.resolveIncremental
+import main.languageServer.resolveAllFirstTime
+import main.languageServer.resolveNonIncremental
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -68,7 +68,7 @@ class NivaTextDocumentService() : TextDocumentService {
     fun didOpen(textDocumentUri: String, textDocumentText: String) {
         try {
             client.info("1111 didOpen resolve all")
-            val resolver = ls.resolveAll(textDocumentUri)
+            val resolver = ls.resolveAllFirstTime(textDocumentUri)
             client.info("2222 all files resolved")
 
             @Suppress("SENSELESS_COMPARISON")
@@ -152,20 +152,24 @@ class NivaTextDocumentService() : TextDocumentService {
 fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
 
     try {
-        client.info("1111 resolveSingleFile")
-        ls.resolveIncremental(uri, sourceChanged)
+        client.info("1111 resolveNonIncremental uri=$uri")
+//        ls.resolveIncremental(uri, sourceChanged)
+        ls.resolver = ls.resolveNonIncremental(uri, sourceChanged)
+//        this.sourceChanged = sourceChanged
+//        lastPathChangedUri = textDocumentUri
         client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
-//        client.refreshDiagnostics()
         client.info("2222 RESOLVED NO ERRORS")
 
     } catch (e: OnCompletionException) {
-        client.info("2222 OnCompletionException ${e.scope}")
+        client.info("2222 OnCompletionException ${e.scope}, ${e.errorMessage}")
+        client.info("userTypes.count = ${ls.resolver.typeDB.userTypes.keys}")
         ls.completionFromScope = e.scope
         val errorMessage = e.errorMessage
         val token = e.token
         if (needShowErrors && errorMessage != null && token != null) {
             showError(client, uri, token, errorMessage)
         }
+        throw e
     } catch (e: CompilerError) {
         client.info("2222 Compiler error e = ${e.message?.removeColors()}")
         if (needShowErrors) {
