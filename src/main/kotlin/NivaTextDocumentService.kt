@@ -111,7 +111,7 @@ class NivaTextDocumentService() : TextDocumentService {
 //        }
 
         val fullCompTime = measureTime {
-            if (compiledAllFiles)
+            if (compiledAllFiles && ls.resolver != null)
                 resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
             else {
                 client.info("not all files resolved, so trying to resolve everything again")
