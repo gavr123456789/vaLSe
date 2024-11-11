@@ -9,7 +9,6 @@ import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.services.LanguageClient
-import org.example.info
 import java.io.File
 import java.net.URI
 
@@ -22,7 +21,7 @@ fun MessageMetadata.toDocumentSymbol(): DocumentSymbol? {
 fun createHierarchyFromType(type: Type, token: Token, client: LanguageClient): DocumentSymbol {
 
     val pos = token.toLspPosition()
-    client.info("createHierarchyFromType from $type, from token: $token")
+//    client.info("createHierarchyFromType from $type, from token: $token")
     val methods = type.protocols.flatMap { protocol ->
         protocol.value.unaryMsgs.mapNotNull { it.value.toDocumentSymbol() } +
         protocol.value.binaryMsgs.mapNotNull { it.value.toDocumentSymbol() } +

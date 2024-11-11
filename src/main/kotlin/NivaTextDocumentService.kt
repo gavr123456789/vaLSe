@@ -2,6 +2,7 @@ package org.example
 
 import frontend.resolver.TypeDB
 import main.frontend.meta.CompilerError
+import main.frontend.meta.Token
 import main.frontend.meta.removeColors
 import main.languageServer.LS
 import main.languageServer.OnCompletionException
@@ -15,6 +16,8 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.example.functions.onDefinition
 import org.example.functions.onHover
 import org.example.functions.documentSymbol
+import java.io.File
+import java.net.URI
 import java.util.concurrent.CompletableFuture
 import kotlin.time.measureTime
 
@@ -25,6 +28,7 @@ class NivaTextDocumentService() : TextDocumentService {
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null
     var compiledAllFiles: Boolean = false
+    val allFiles = mutableSetOf<String>()
 
     override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> {
         val r = documentSymbol(ls, client, params)
@@ -74,6 +78,12 @@ class NivaTextDocumentService() : TextDocumentService {
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {
                 this.typeDB = resolver.typeDB
+                allFiles.addAll(ls.fileToDecl.keys.map{File(it).toURI().toString()})
+                ls.pm?.let {
+                    // add main
+                    allFiles.add(File(it.pathToMainOrSingleFile).toURI().toString())
+                }
+
             }
             this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
@@ -85,8 +95,12 @@ class NivaTextDocumentService() : TextDocumentService {
             compiledAllFiles = false
 
             // show error only in right files
-            if (textDocumentUri.contains(e.token.file.name.toString()))
-                showError(client, textDocumentUri, e.token, e.noColorsMsg)
+//            if (textDocumentUri.contains(e.token.file.name.toString())) {
+                // except the current file, because there is an error to show
+//            val otherURI = this.ls.fileToDecl.keys - File(URI(textDocumentUri)).name.toString()
+            val otherURI = ls.getAllFilesURIs() - File(URI(textDocumentUri)).name.toString()
+                showError(client, e.token, e.noColorsMsg, otherURI.toList(), e.token.file.absolutePath)
+//            }
         }
 
     }
@@ -148,13 +162,20 @@ class NivaTextDocumentService() : TextDocumentService {
 //        }
 //    }
 //}
+fun Token.toURI(): String =
+    file.toURI().toString()
+
+fun LS.getAllFilesURIs() =
+    fileToDecl.keys.map{
+        File(it).toURI().toString()
+    }
 
 fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
     try {
         client.info("1111 resolveNonIncremental uri=$uri")
 //        ls.resolveIncremental(uri, sourceChanged)
         ls.resolver = ls.resolveNonIncremental(uri, sourceChanged)
-        clearErrors(client, uri)
+        clearAllErrors(client, ls.getAllFilesURIs(), uri)
         client.info("2222 RESOLVED NO ERRORS")
     } catch (e: OnCompletionException) {
         client.info("2222 OnCompletionException ${e.scope}, ${e.errorMessage}")
@@ -163,13 +184,15 @@ fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged
         val errorMessage = e.errorMessage
         val token = e.token
         if (needShowErrors && errorMessage != null && token != null) {
-            showError(client, uri, token, errorMessage)
+            val otherURI = ls.getAllFilesURIs() - uri//File(URI(uri)).name.toString()
+            showError(client, token, errorMessage, otherURI, uri)
         }
 //        throw e
     } catch (e: CompilerError) {
         client.info("2222 Compiler error e = ${e.message?.removeColors()}")
         if (needShowErrors) {
-            showError(client, uri, e.token, e.noColorsMsg)
+            val otherURI = ls.fileToDecl.keys - uri//File(URI(uri)).name.toString()
+            showError(client, e.token, e.noColorsMsg, otherURI.toList(), uri)
         }
     }
 }

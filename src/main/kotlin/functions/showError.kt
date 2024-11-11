@@ -9,11 +9,17 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.services.LanguageClient
 
 
-fun clearErrors(client: LanguageClient, textDocURI: String) {
-    client.publishDiagnostics(PublishDiagnosticsParams(textDocURI, listOf()))
+fun clearAllErrors(client: LanguageClient, allURI: List<String>, currentFileURI: String) {
+//    client.info("Clearing All Errors for ${(allURI + currentFileURI).joinToString("\n")}")
+    client.publishDiagnostics(PublishDiagnosticsParams(currentFileURI, listOf()))
+
+    allURI.forEach { uri ->
+        client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
+    }
+
 }
 
-fun showError(client: LanguageClient, textDocURI: String, t: Token, message: String) {
+fun showError(client: LanguageClient, t: Token, message: String, otherURI: List<String>, currentFileURI: String) {
     val start = t.relPos.start - 1
     val end = t.relPos.end
     val line = t.line - 1
@@ -22,8 +28,8 @@ fun showError(client: LanguageClient, textDocURI: String, t: Token, message: Str
         Range(Position(line, 0), Position(line, 2))
     else
         Range(Position(line, start), Position(line, end))
-    client.info(range.toString())
-    client.info(t.toString())
+//    client.info(range.toString())
+//    client.info(t.toString())
 
     val d = Diagnostic(
         range,
@@ -32,5 +38,10 @@ fun showError(client: LanguageClient, textDocURI: String, t: Token, message: Str
         t.lexeme
     )
 
-    client.publishDiagnostics(PublishDiagnosticsParams(textDocURI, listOf(d)))
+//    client.publishDiagnostics(PublishDiagnosticsParams(currentFileURI, listOf()))
+    otherURI.forEach { uri ->
+        client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
+    }
+    client.info("error for ${t.toURI()}\n${d.message}\n")
+    client.publishDiagnostics(PublishDiagnosticsParams(t.toURI(), listOf(d)))
 }

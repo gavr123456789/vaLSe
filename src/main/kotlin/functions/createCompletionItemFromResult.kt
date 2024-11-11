@@ -114,10 +114,7 @@ fun createCompletionItemFromResult(
                             CompletionItem().also {
                                 it.detail = "$type -> ${kw.returnType} " // + "Pkg: " + kw.pkg
                                 it.kind = CompletionItemKind.Function
-//                                val errors = kw.errors
-//                                val possibleErrors = if (errors != null) errors.joinToString { x -> x.name } else ""
                                 addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
-                                //Either.forLeft("Possible errors: $possibleErrors")
 
                                 if (kw is KeywordMsgMetaData) {
                                     it.label =
