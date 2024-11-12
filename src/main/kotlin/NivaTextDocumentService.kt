@@ -81,7 +81,7 @@ class NivaTextDocumentService() : TextDocumentService {
                 allFiles.addAll(ls.fileToDecl.keys.map{File(it).toURI().toString()})
                 ls.pm?.let {
                     // add main
-                    allFiles.add(File(it.pathToMainOrSingleFile).toURI().toString())
+                    allFiles.add(File(it.pathToNivaMainFile).toURI().toString())
                 }
 
             }
