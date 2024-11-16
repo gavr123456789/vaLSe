@@ -1,5 +1,6 @@
 package org.example
 
+import frontend.resolver.KeywordArg
 import frontend.resolver.KeywordMsgMetaData
 import frontend.resolver.MessageMetadata
 import frontend.resolver.Type
@@ -61,7 +62,16 @@ fun createCompletionItemFromResult(
                         addDocsAndErrors(msg.errors, msg.docComment ?: msg.declaration?.docComment, it)
                     }
                 }
-
+                // creating a: ${1:Int} b: ${2:Int} c: ${0:Int}
+                // last must be 0 because it's an end of snippet signal https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#snippet_syntax
+                val constructInsertText = { kwArgs: List<KeywordArg> ->
+                    var c = 0
+                    kwArgs.joinToString(" ") {
+                        c++
+                        val cc = if (c == kwArgs.count()) 0 else c
+                        it.name + ": \${$cc:${it.type}}"
+                    }
+                }
                 type.protocols.values.forEach { protocol ->
                     val unaryCompletions = protocol.unaryMsgs.values.map { unary ->
                         createCompletionItemForUnaryBinary(unary, protocol.name)
@@ -70,16 +80,7 @@ fun createCompletionItemFromResult(
                         createCompletionItemForUnaryBinary(binary, protocol.name)
                     }
 
-                    // creating a: ${1:Int} b: ${2:Int} c: ${0:Int}
-                    // last must be 0 because it's an end of snippet signal https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#snippet_syntax
-                    val constructInsertText = { kw: KeywordMsgMetaData ->
-                        var c = 0
-                        kw.argTypes.joinToString(" ") {
-                            c++
-                            val cc = if (c == kw.argTypes.count()) 0 else c
-                            it.name + ": \${$cc:${it.type}}"
-                        }
-                    }
+
 
                     val keywordCompletions = protocol.keywordMsgs.values.map { kw ->
                         CompletionItem().also {
@@ -92,7 +93,7 @@ fun createCompletionItemFromResult(
                             val label = kw.argTypes.joinToString(" ") { x -> x.toString() }
                             it.label = label // from: Int to: String
 
-                            val insertText = pipeIfNeeded + constructInsertText(kw)
+                            val insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
                             it.insertText = insertText
                             if (lspResult.needBraceWrap ) {
                                 val pos = expr.token.toLspPosition()
@@ -120,7 +121,7 @@ fun createCompletionItemFromResult(
                                     it.label =
                                         kw.argTypes.joinToString(" ") { x -> x.toString() } // from: Int to: String
                                     it.insertTextFormat = InsertTextFormat.Snippet
-                                    it.insertText = pipeIfNeeded + constructInsertText(kw)
+                                    it.insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
                                 } else {
                                     it.label = kw.name
                                     it.textEdit
@@ -142,9 +143,8 @@ fun createCompletionItemFromResult(
                         it.kind = CompletionItemKind.Constructor
                         it.insertTextFormat = InsertTextFormat.Snippet
 
-                        var c = 0
                         it.insertText =
-                            type.fields.joinToString(" ") { x -> c++; x.name + ": \${$c:${x.type}}" } //"from: $1 to: $2"
+                            constructInsertText(type.fields)
                     })
                 }
 
