@@ -95,7 +95,7 @@ fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Se
         }
 }
 
-/// returns all the links from the @uri file
+/// go to definition of msg send
 fun onDefinition(ls: LS, client: LanguageClient, uri: String, position: Position): List<LocationLink> {
 
     val tokenToLocationLink = { token: Token, targetToken: Token ->

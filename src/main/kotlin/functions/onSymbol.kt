@@ -33,12 +33,9 @@ fun createHierarchyFromType(type: Type, token: Token, client: LanguageClient): D
     return typeSymbol
 }
 
+// this is for the list of file's links
 fun documentSymbol(ls: LS, client: LanguageClient, params: DocumentSymbolParams): List<DocumentSymbol> {
-//    client.info("| URIING the ${params.textDocument.uri}")
     val uriFile = File(URI(params.textDocument.uri)).toString()
-//    client.info("onSymbol ${params.textDocument.uri}\n${ls.fileToDecl.keys}")
-//    client.info("ls.fileToDecl = ${ls.fileToDecl.keys}\nsercingFor: ${params.textDocument.uri}")
-
     ls.fileToDecl[uriFile]?.let {
         return it.filterIsInstance<SomeTypeDeclaration>().map {
             createHierarchyFromType(it.receiver!!, it.token, client)

@@ -51,9 +51,16 @@ class NivaTextDocumentService() : TextDocumentService {
 
     }
 
+    override fun references(params: ReferenceParams): CompletableFuture<List<Location?>?>? {
+        client.info("!!!references call")
+        return super.references(params)
+    }
+
     override fun definition(params: DefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
-        client.info("This is definition CALL with $params")
+        client.info("This is definition CALL with params.position.line: ${params.position.line}")
         val result = onDefinition(ls, client, params.textDocument.uri, params.position)
+
+
         return CompletableFuture.completedFuture(Either.forRight(result))
     }
 
@@ -183,6 +190,8 @@ fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged
         ls.completionFromScope = e.scope
         val errorMessage = e.errorMessage
         val token = e.token
+        client.info("3333 needShowErrors =  ${needShowErrors},  errorMessage = ${errorMessage}, token = ${token}")
+
         if (needShowErrors && errorMessage != null && token != null) {
             val otherURI = ls.getAllFilesURIs() - uri//File(URI(uri)).name.toString()
             showError(client, token, errorMessage, otherURI, uri)

@@ -197,29 +197,13 @@ fun createCompletionItemFromResult(
         is LspResult.ScopeSuggestion -> {
             client.info("LspResult.ScopeSuggestion")
             if (lspResult.scope.isNotEmpty()) {
-                client.info("новый вариант")
+                client.info("new variant - getting completion items from scope suggestion")
                 completions.addAll(lspResult.scope.map { k ->
                     CompletionItem(k.key).also {
                         it.kind = CompletionItemKind.Variable
                         it.detail = k.value.toString()
                     }
                 })
-            } else {
-                client.info("старый вариант с полной перекомпиляцией с заменой на Bang")
-                if (sourceChanged != null && lastPathChangedUri != null) {
-                    // insert bang and compile it with bang,
-                    // so it throws with scope information from this bang
-                    val textWithBang = insertTextAtPosition(sourceChanged, line, character, "!!")
-                    resolveSingleFile(ls, client, lastPathChangedUri, textWithBang, false)
-
-                    completions.addAll(ls.completionFromScope.map { k ->
-                        CompletionItem(k.key).also {
-                            it.kind = CompletionItemKind.Variable
-                            it.detail = k.value.toString()
-                        }
-                    })
-                }
-
             }
         }
 
