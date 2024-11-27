@@ -20,7 +20,13 @@ class NivaServer : LanguageServer, LanguageClientAware {
         capabilities.definitionProvider = Either.forLeft(true)
         capabilities.hoverProvider = Either.forLeft(true)
         capabilities.documentSymbolProvider = Either.forLeft(true)
-        capabilities.workspace = WorkspaceServerCapabilities(WorkspaceFoldersOptions())
+        capabilities.workspace = WorkspaceServerCapabilities(
+            WorkspaceFoldersOptions().also{
+                it.supported = true
+//                it.changeNotifications = Either.forRight(true)
+            }
+        )
+        capabilities.workspace.workspaceFolders.supported = true
 //        capabilities.workspaceSymbolProvider = Either.forRight(WorkspaceSymbolOptions(true))
 //        capabilities.typeHierarchyProvider = Either.forLeft(true)
 //        capabilities.declarationProvider = Either.forLeft(true)
@@ -53,7 +59,7 @@ class NivaServer : LanguageServer, LanguageClientAware {
         return workspaceService
     }
 
-    override fun initialized(params: InitializedParams?) {
+    override fun initialized(params: InitializedParams) {
         super.initialized(params)
     }
 

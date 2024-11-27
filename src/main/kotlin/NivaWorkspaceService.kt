@@ -1,8 +1,12 @@
 package org.example
 
+import org.eclipse.lsp4j.CreateFilesParams
+import org.eclipse.lsp4j.DeleteFilesParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
+import org.eclipse.lsp4j.RenameFilesParams
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.WorkspaceService
@@ -13,7 +17,14 @@ class NivaWorkspaceService : WorkspaceService {
 
 //    val workspaces: MutableList<WorkspaceFolder> = mutableListOf()
 
+    override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
+        client.info("didChangeWatchedFiles! params = $params")
+    }
+
     override fun didChangeWorkspaceFolders(params: DidChangeWorkspaceFoldersParams) {
+        client.info("didChangeWorkspaceFolders! params = $params")
+
+
 //        val event = params.event
 //        client.info("didChangeWorkspaceFolders $event")
 //        val added = event.added
@@ -21,6 +32,36 @@ class NivaWorkspaceService : WorkspaceService {
 //        this.workspaces.addAll(added)
 //        this.workspaces.removeAll(removed)
     }
+
+
+    override fun didDeleteFiles(params: DeleteFilesParams) {
+        client.info("didDeleteFiles! params = $params")
+
+//        super.didDeleteFiles(params)
+    }
+    override fun didRenameFiles(params: RenameFilesParams?) {
+        client.info("didRenameFiles! params = $params")
+//        super.didRenameFiles(params)
+    }
+
+    override fun didCreateFiles(params: CreateFilesParams?) {
+        client.info("didCreateFiles! params = $params")
+//        super.didCreateFiles(params)
+    }
+
+    override fun willCreateFiles(params: CreateFilesParams?): CompletableFuture<WorkspaceEdit?>? {
+        client.info("willCreateFiles! params = $params")
+        return super.willCreateFiles(params)
+    }
+    override fun willDeleteFiles(params: DeleteFilesParams?): CompletableFuture<WorkspaceEdit?>? {
+        client.info("willDeleteFiles! params = $params")
+        return super.willDeleteFiles(params)
+    }
+    override fun willRenameFiles(params: RenameFilesParams?): CompletableFuture<WorkspaceEdit?>? {
+        client.info("willRenameFiles! params = $params")
+        return super.willRenameFiles(params)
+    }
+
 
     override fun resolveWorkspaceSymbol(workspaceSymbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol?>? {
         client.info("!!resolveWorkspaceSymbol $workspaceSymbol")
@@ -46,12 +87,10 @@ class NivaWorkspaceService : WorkspaceService {
 //        return CompletableFuture.completedFuture(Either.forRight(result))
 //    }
 
-    override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
-    }
-
 //    fun getCurrentOpenDirectory(): String? = if (workspaces.isEmpty()) null else workspaces.first().name
 
 
-    override fun didChangeConfiguration(params: DidChangeConfigurationParams?) {
+    override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
+        println("didChangeConfiguration $params")
     }
 }

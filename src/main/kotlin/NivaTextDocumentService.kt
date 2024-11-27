@@ -76,11 +76,14 @@ class NivaTextDocumentService() : TextDocumentService {
         return super.typeDefinition(params)
     }
 
-    fun didOpen(textDocumentUri: String, textDocumentText: String) {
+    fun didOpen(textDocumentUri: String, textDocumentText: String?) {
         try {
-            client.info("1111 didOpen resolve all")
-            val resolver = ls.resolveAllFirstTime(textDocumentUri, true)
-            client.info("2222 all files resolved")
+//            client.info("1111 didOpen resolve all")
+            // если первый раз была ошибка и мы ререзолвим все снова, то происходит чтение файлов, читаются старые файлы, и получается резолвятся старые файлы с ошибкой
+            val resolver = ls.resolveAllFirstTime(textDocumentUri, true, textDocumentText)
+            client.info("2222 did open all files resolved")
+//            client.info("2222 nonIncrementalStore.keys = ${ls.nonIncrementalStore.keys}")
+            clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
 
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {
@@ -92,7 +95,8 @@ class NivaTextDocumentService() : TextDocumentService {
                 }
 
             }
-            this.sourceChanged = textDocumentText
+            if (textDocumentText != null)
+                this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
             compiledAllFiles = true // we need that because opening a new file will thiger did open again
 
@@ -118,24 +122,33 @@ class NivaTextDocumentService() : TextDocumentService {
 
     override fun didClose(params: DidCloseTextDocumentParams) {
         client.info("didClose")
+        // we cant detect on delete events
+        // so just rerun first time compilation when some file closes
+        // because when they deleted they 100% closes
+        compiledAllFiles = false
+        val pm = ls.pm
+        if (pm != null) {
+            val uri = File(pm.pathToNivaMainFile).toURI().toString()
+            // null because we need it to reread all the files
+            client.info("reresolve everything because file closed")
+            // reboot nonIncrementalStore
+            ls.nonIncrementalStore.clear()
+            didOpen(uri, null)
+//            ls.resolveAllFirstTime(uri, true, mainContent = null)
+        }
     }
 
     override fun didChange(params: DidChangeTextDocumentParams) {
-//        client.info("didChange")
-
         val sourceChanged = params.contentChanges.first().text
 
         this.sourceChanged = sourceChanged
         this.lastPathChangedUri = params.textDocument.uri
-//        val fullCompTime = measureTime {
-//            didOpen(params.textDocument.uri, sourceChanged)
-//        }
 
         val fullCompTime = measureTime {
             if (compiledAllFiles && ls.resolver != null)
                 resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
             else {
-                client.info("not all files resolved, so trying to resolve everything again")
+                client.info("not all files was resolved from first, so trying full resolve ")
                 didOpen(params.textDocument.uri, sourceChanged)
             }
         }
@@ -190,7 +203,6 @@ fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged
         ls.completionFromScope = e.scope
         val errorMessage = e.errorMessage
         val token = e.token
-        client.info("3333 needShowErrors =  ${needShowErrors},  errorMessage = ${errorMessage}, token = ${token}")
 
         if (needShowErrors && errorMessage != null && token != null) {
             val otherURI = ls.getAllFilesURIs() - uri//File(URI(uri)).name.toString()
