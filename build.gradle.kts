@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.0.20"
+    kotlin("jvm") version "2.2.0-Beta1"
     id("org.graalvm.buildtools.native") version "0.10.3"
     application
 }
@@ -22,7 +22,7 @@ tasks.test {
     useJUnitPlatform()
 }
 kotlin {
-    jvmToolchain(22)
+    jvmToolchain(21)
 }
 
 graalvmNative {
