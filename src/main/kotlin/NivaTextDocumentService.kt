@@ -52,7 +52,7 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun references(params: ReferenceParams): CompletableFuture<List<Location?>?>? {
-        client.info("!!!references call")
+        client.info("references call")
         return super.references(params)
     }
 
@@ -78,30 +78,30 @@ class NivaTextDocumentService() : TextDocumentService {
 
     fun didOpen(textDocumentUri: String, textDocumentText: String?) {
         try {
-//            client.info("1111 didOpen resolve all")
+            client.info("1111 didOpen resolve all")
             // если первый раз была ошибка и мы ререзолвим все снова, то происходит чтение файлов, читаются старые файлы, и получается резолвятся старые файлы с ошибкой
+//            clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
+
             val resolver = ls.resolveAllFirstTime(textDocumentUri, true, textDocumentText)
             client.info("2222 did open all files resolved")
-//            client.info("2222 nonIncrementalStore.keys = ${ls.nonIncrementalStore.keys}")
+            client.info("2222 ls.getAllFilesURIs() = ${ls.getAllFilesURIs()}")
+            client.info("2222 textDocumentUri = $textDocumentUri")
             clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
 
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {
                 this.typeDB = resolver.typeDB
-                allFiles.addAll(ls.fileToDecl.keys.map{File(it).toURI().toString()})
-                ls.pm?.let {
-                    // add main
-                    allFiles.add(File(it.pathToNivaMainFile).toURI().toString())
-                }
-
             }
             if (textDocumentText != null)
                 this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
+            client.info("lastPathChangedUri = ${lastPathChangedUri}")
+
             compiledAllFiles = true // we need that because opening a new file will thiger did open again
 
         } catch (e: CompilerError) {
-            client.info("2222 CompilerError = ${e.message?.removeColors()}")
+            client.info("2222 didOpen CompilerError = ${e.message?.removeColors()}")
+            client.info("2222 didOpen e.token.file = ${e.token.file}")
 
             compiledAllFiles = false
 
@@ -112,6 +112,7 @@ class NivaTextDocumentService() : TextDocumentService {
             val otherURI = ls.getAllFilesURIs() - File(URI(textDocumentUri)).name.toString()
                 showError(client, e.token, e.noColorsMsg, otherURI.toList(), e.token.file.absolutePath)
 //            }
+
         }
 
     }
@@ -131,6 +132,7 @@ class NivaTextDocumentService() : TextDocumentService {
             val uri = File(pm.pathToNivaMainFile).toURI().toString()
             // null because we need it to reread all the files
             client.info("reresolve everything because file closed")
+
             // reboot nonIncrementalStore
             ls.nonIncrementalStore.clear()
             didOpen(uri, null)
