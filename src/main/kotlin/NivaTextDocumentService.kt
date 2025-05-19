@@ -1,6 +1,9 @@
 package org.example
 
 import frontend.resolver.TypeDB
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import main.frontend.meta.CompilerError
 import main.frontend.meta.Token
 import main.frontend.meta.removeColors
@@ -28,7 +31,8 @@ class NivaTextDocumentService() : TextDocumentService {
     private var sourceChanged: String? = null
     private var lastPathChangedUri: String? = null
     var compiledAllFiles: Boolean = false
-    val allFiles = mutableSetOf<String>()
+
+    val lspScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> {
         val r = documentSymbol(ls, client, params)
@@ -47,6 +51,7 @@ class NivaTextDocumentService() : TextDocumentService {
         client.info("didOpen")
         if (compiledAllFiles == false) {
             didOpen(params.textDocument.uri, params.textDocument.text)
+            ls.runDevModeWatching(lspScope) { client.info("DEV_MODE $it") }
         }
 
     }

@@ -15,6 +15,7 @@ repositories {
 dependencies {
     implementation("com.github.gavr123456789:niva:0.1")
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.22.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
     testImplementation(kotlin("test"))
 }

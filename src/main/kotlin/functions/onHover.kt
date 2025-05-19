@@ -13,22 +13,21 @@ import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.services.LanguageClient
 
+
+fun createHover(tok: Token, text: String) = Hover().apply {
+    range = tok.toLspPosition()
+    setContents(MarkupContent(MarkupKind.MARKDOWN, text))
+}
+fun extractDocCommentFromType(type: Type): String? {
+    return if (type is UserLike) {
+        type.typeDeclaration?.docComment?.let {
+            "\n\n" + it.text
+        }
+    } else null
+}
+
 fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
 //    client.info("onHover signal")
-
-    val createHover = { tok: Token, text: String ->
-        Hover().apply {
-            range = tok.toLspPosition()
-            setContents(MarkupContent(MarkupKind.MARKDOWN, text))
-        }
-    }
-    val extractDocCommentFromType = { type: Type ->
-        if (type is UserLike) {
-            type.typeDeclaration?.docComment?.let {
-                "\n\n" + it.text
-            }
-        } else null
-    }
 
     newFind(ls, client, params.textDocument.uri, params.position)
         .forEach {
