@@ -17,7 +17,9 @@ import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
+import org.example.functions.exrPosition
 import org.example.functions.toLspPosition
+import org.example.functions.toStringWithReceiver
 
 fun createCompletionItemFromResult(
     lspResult: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
@@ -173,8 +175,8 @@ fun createCompletionItemFromResult(
 
                 // union variants
                 if (type is Type.UnionRootType && expr is IdentifierExpr) {
-                    client.info("type is Union")
-                    val pos = expr.token.toLspPosition().also { it.end.character = character }
+//                    client.info("type is Union")
+                    val pos = exrPosition(expr, client::info).also { it.end.character = character }
                     // collect all union branches
                     val deep = type.stringAllBranches(expr.name, deep = true)
                     val notDeep = type.stringAllBranches(expr.name, deep = false)
@@ -186,10 +188,43 @@ fun createCompletionItemFromResult(
                             it.additionalTextEdits = listOf(TextEdit(pos, ""))
                         }
                     }
-                    client.info("expr = $expr\ndeep replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
+//                    client.info("expr = $expr\ndeep replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
 
                     completions.add(complItem(deep, true))
                     completions.add(complItem(notDeep, false))
+                }
+                // bool variants
+                // union variants
+                if (type.name == "Bool") {
+                    fun boolMatch(exprMatchOn: String,): String {
+                        val unions = listOf("true", "false")
+                        return buildString {
+                            // | ident
+                            append("| $exprMatchOn\n")
+                            unions.forEachIndexed { i, union ->
+                                append("| ", union, " => ", "[]")
+                                if (i != unions.count() - 1) append("\n")
+                            }
+                        }
+                    }
+//                    client.info("type is Union")
+
+                    val pos = exrPosition(expr, client::info).also { it.end.character = character }
+                    // collect all union branches
+//                    val deep = type.stringAllBranches(expr.name, deep = true)
+//                    val notDeep = type.stringAllBranches(expr.name, deep = false)
+                    fun complItem(text: String): CompletionItem {
+                        return CompletionItem().also {
+                            it.kind = CompletionItemKind.Snippet
+                            it.label = "matchBool"
+                            it.insertText = text
+                            it.additionalTextEdits = listOf(TextEdit(pos, ""))
+                        }
+                    }
+                    val text = boolMatch(expr.toStringWithReceiver())
+                    client.info("expr = $expr\n replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
+
+                    completions.add(complItem(text))
                 }
             }
         }

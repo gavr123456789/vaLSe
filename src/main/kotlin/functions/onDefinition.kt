@@ -2,6 +2,7 @@ package org.example.functions
 
 import frontend.resolver.Type
 import main.frontend.meta.Token
+import main.frontend.parser.types.ast.Expression
 import main.frontend.parser.types.ast.IdentifierExpr
 import main.frontend.parser.types.ast.Message
 import main.frontend.parser.types.ast.Statement
@@ -26,6 +27,23 @@ fun Token.toLspPosition(): Range {
         Range(Position(line - 1, if (start != 0) start else 0), Position(lineEnd - 1, end))
     } else
         Range(Position(line - 1, if (start != 0) start else 0), Position(line - 1, end))
+}
+
+fun exrPosition(expr: Expression, log: (String) -> Unit): Range {
+    return if (expr is Message) {
+        val q = expr.token.toLspPosition()
+        val result = Range(expr.receiver.token.toLspPosition().start, q.end)
+        result
+    } else
+        expr.token.toLspPosition()
+}
+
+fun Expression.toStringWithReceiver(): String {
+    return if (this is Message) {
+        this.receiver.toString() + " " + this.toString()
+    } else {
+        this.toString()
+    }
 }
 
 fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Sequence<Statement> {

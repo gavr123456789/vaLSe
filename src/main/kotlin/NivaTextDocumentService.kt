@@ -206,7 +206,7 @@ fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged
         client.info("2222 RESOLVED NO ERRORS")
     } catch (e: OnCompletionException) {
         client.info("2222 OnCompletionException ${e.scope}, ${e.errorMessage}")
-        client.info("userTypes.count = ${ls.resolver.typeDB.userTypes.keys}")
+//        client.info("userTypes.count = ${ls.resolver.typeDB.userTypes.keys}")
         ls.completionFromScope = e.scope
         val errorMessage = e.errorMessage
         val token = e.token

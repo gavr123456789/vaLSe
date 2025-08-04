@@ -37,9 +37,11 @@ fun createHierarchyFromType(type: Type, token: Token, client: LanguageClient): D
 fun documentSymbol(ls: LS, client: LanguageClient, params: DocumentSymbolParams): List<DocumentSymbol> {
     val uriFile = File(URI(params.textDocument.uri)).toString()
     ls.fileToDecl[uriFile]?.let {
-        return it.filterIsInstance<SomeTypeDeclaration>().map {
-            createHierarchyFromType(it.receiver!!, it.token, client)
-        }
+        return it.asSequence()
+            .filterIsInstance<SomeTypeDeclaration>()
+            .filter{it.receiver != null} // looks like aliases doesnt have receivers
+            .map { createHierarchyFromType(it.receiver!!, it.token, client) }
+            .toList()
     }
 
     // if file doesnt contain any declarations
