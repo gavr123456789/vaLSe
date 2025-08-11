@@ -58,6 +58,7 @@ fun createCompletionItemFromResult(
                     CompletionItem(msg.name).also {
                         it.detail = "$type -> ${msg.returnType} " //+ "Pkg: " + msg.pkg
                         it.kind = CompletionItemKind.Function
+
                         it.sortText = protocol
 //                        it.filterText = protocol
 //                        it.detail = protocol
@@ -144,7 +145,7 @@ fun createCompletionItemFromResult(
                         it.label = type.fields.joinToString(" ") { x -> x.toString() }
                         it.kind = CompletionItemKind.Constructor
                         it.insertTextFormat = InsertTextFormat.Snippet
-
+                        it
                         it.insertText =
                             constructInsertText(type.fields)
                     })
@@ -158,6 +159,7 @@ fun createCompletionItemFromResult(
                             it.label = field.name
                             it.detail = field.type.toString()
                             it.kind = CompletionItemKind.Field
+                            it.sortText = "aaa"
                         }
                     })
                 }
@@ -176,7 +178,7 @@ fun createCompletionItemFromResult(
                 // union variants
                 if (type is Type.UnionRootType && expr is IdentifierExpr) {
 //                    client.info("type is Union")
-                    val pos = exrPosition(expr, client::info).also { it.end.character = character }
+                    val pos = exrPosition(expr, client::info).also { it.end.character = character; it.start.character = 0 }
                     // collect all union branches
                     val deep = type.stringAllBranches(expr.name, deep = true)
                     val notDeep = type.stringAllBranches(expr.name, deep = false)
@@ -205,14 +207,11 @@ fun createCompletionItemFromResult(
                                 append("| ", union, " => ", "[]")
                                 if (i != unions.count() - 1) append("\n")
                             }
+                            sasat(expr.token.relPos.start)
                         }
                     }
-//                    client.info("type is Union")
 
-                    val pos = exrPosition(expr, client::info).also { it.end.character = character }
-                    // collect all union branches
-//                    val deep = type.stringAllBranches(expr.name, deep = true)
-//                    val notDeep = type.stringAllBranches(expr.name, deep = false)
+                    val pos = exrPosition(expr, client::info).also { it.end.character = character; it.start.character = 0 }
                     fun complItem(text: String): CompletionItem {
                         return CompletionItem().also {
                             it.kind = CompletionItemKind.Snippet
@@ -222,7 +221,40 @@ fun createCompletionItemFromResult(
                         }
                     }
                     val text = boolMatch(expr.toStringWithReceiver())
-                    client.info("expr = $expr\n replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
+//                    client.info("expr = $expr\n replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
+
+                    completions.add(complItem(text))
+                }
+                // null match
+                if (type is Type.NullableType) {
+                    fun nullMatch(exprMatchOn: String,): String {
+                        return buildString {
+                            // | ident
+                            val insertText = if (expr is IdentifierExpr)
+                                " ${expr.token.lexeme } "
+                            else
+                                $$"${1:nonNull}"
+                            appendLine("| $exprMatchOn")
+                            appendLine("| null => []")
+                            appendLine($$"|=> [${1:$$insertText}]")
+                            client.info(expr.token.relPos.start.toString())
+                            sasat(expr.token.relPos.start)
+
+                        }
+                    }
+
+                    val pos = exrPosition(expr, client::info).also { it.end.character = character; it.start.character = 0 }
+                    fun complItem(text: String): CompletionItem {
+                        return CompletionItem().also {
+                            it.kind = CompletionItemKind.Snippet
+                            it.label = "matchNull"
+                            it.insertText = text
+                            it.insertTextFormat = InsertTextFormat.Snippet
+                            it.additionalTextEdits = listOf(TextEdit(pos, ""))
+                        }
+                    }
+                    val text = nullMatch(expr.toStringWithReceiver())
+//                    client.info("expr = $expr\n replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
 
                     completions.add(complItem(text))
                 }
@@ -249,4 +281,13 @@ fun createCompletionItemFromResult(
     }
 
     return completions
+}
+
+fun StringBuilder.sasat(ident: Int) {
+    val strIdent = " ".repeat(ident)
+    for (i in lastIndex downTo 0) {
+        if (i == 0 || this[i - 1] == '\n') {
+            insert(i, strIdent) // вставляем пробелы
+        }
+    }
 }
