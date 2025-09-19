@@ -51,6 +51,7 @@ class NivaTextDocumentService() : TextDocumentService {
         client.info("didOpen")
         if (compiledAllFiles == false) {
             didOpen(params.textDocument.uri, params.textDocument.text)
+            client.info("starting to watch")
             ls.runDevModeWatching(lspScope) { client.info("DEV_MODE $it") }
         }
 

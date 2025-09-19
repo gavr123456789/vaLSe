@@ -51,10 +51,12 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
                 }
 
                 is Expression -> {
-                    val type = it.type!!
-                    val docText = extractDocCommentFromType(type) ?: ""
-                    ls.info?.let { it1 -> it1("onhover EXPR ${it}\n ${it.token.relPos}") }
-                    return createHover(it.token, type.toString() + docText)
+                    val type = it.type
+                    if (type != null) {
+                        val docText = extractDocCommentFromType(type) ?: ""
+                        ls.info?.let { it1 -> it1("onhover EXPR ${it}\n ${it.token.relPos}") }
+                        return createHover(it.token, type.toString() + docText)
+                    }
                 }
 
                 else -> {}
