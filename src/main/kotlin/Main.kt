@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import java.io.InputStream
 import java.io.OutputStream
 
+
 fun main() {
 
     val start = { `in`: InputStream?, out: OutputStream? ->
@@ -36,33 +37,4 @@ fun onCompletion1(
     val completionItems = createCompletionItemFromResult(lspResult, client, sourceChanged, line, character, ls, lastPathChangedUri)
     return completionItems
 }
-
-
-fun insertTextAtPosition(text: String, row: Int, column: Int, insertText: String): String {
-    // Разделить текст на строки
-    val lines = text.lines().toMutableList()
-
-    // Проверить, существует ли нужная строка
-    if (row < 0 || row >= lines.count()) {
-        throw IllegalArgumentException("Invalid row number, row($row) < 0 || row($row) >= lines.size(${lines.count()})")
-    }
-
-    // Получить нужную строку
-    val line = lines[row]
-
-    // Проверить, существует ли нужная позиция в строке
-    if (column < 0 || column > line.length) {
-        throw IllegalArgumentException("Invalid column number")
-    }
-
-    // Вставить текст в нужную позицию
-    val newLine = StringBuilder(line).insert(column, insertText).toString()
-
-    // Обновить строку в списке строк
-    lines[row] = newLine
-
-    // Объединить строки обратно в текст
-    return lines.joinToString("\n")
-}
-
 

@@ -1,5 +1,9 @@
+//import sun.jvmstat.monitor.MonitoredVmUtil.mainClass
+
+//import sun.jvmstat.monitor.MonitoredVmUtil.mainClass
+
 plugins {
-    kotlin("jvm") version "2.2.10"
+    kotlin("jvm") version "2.2.20"
     id("org.graalvm.buildtools.native") version "0.10.3"
     application
 }
@@ -15,7 +19,7 @@ repositories {
 dependencies {
     implementation("com.github.gavr123456789:niva:0.1")
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.22.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
     testImplementation(kotlin("test"))
 }
