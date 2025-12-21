@@ -3,7 +3,7 @@
 //import sun.jvmstat.monitor.MonitoredVmUtil.mainClass
 
 plugins {
-    kotlin("jvm") version "2.2.20"
+    kotlin("jvm") version "2.3.0"
     id("org.graalvm.buildtools.native") version "0.10.3"
     application
 }
