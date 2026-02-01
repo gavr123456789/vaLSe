@@ -22,9 +22,7 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
-kotlin {
-    jvmToolchain(21)
-}
+//kotlin { jvmToolchain(21) }
 
 graalvmNative {
     binaries {
