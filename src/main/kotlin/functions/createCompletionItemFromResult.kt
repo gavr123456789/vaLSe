@@ -36,7 +36,7 @@ fun createCompletionItemFromResult(
             if (expr is Expression) {
                 val type = expr.type!!
                 val isPipeNeeded = expr is KeywordMsg && (!expr.isCascade || expr.isPiped)
-                val pipeIfNeeded = if (isPipeNeeded) "|> " else ""
+                val pipeIfNeeded = if (isPipeNeeded) ", " else ""
 
                 val addDocsAndErrors = { errors: Set<Type.Union>?, docComment: DocComment?, it: CompletionItem ->
                     val documentationStr = StringBuilder()
@@ -75,7 +75,16 @@ fun createCompletionItemFromResult(
                         it.name + ": \${$cc:${it.type}}"
                     }
                 }
-                type.protocols.values.forEach { protocol ->
+
+                val anyType = ls.resolver.typeDB.internalTypes["Any"]!!
+
+                val seq = generateSequence(type) { it.parent }.toMutableList()
+                if (seq.last().name != "Any") {
+                    seq += anyType
+                }
+
+                seq.forEach { currentType ->
+                    currentType.protocols.values.forEach { protocol ->
                     val unaryCompletions = protocol.unaryMsgs.values.map { unary ->
                         createCompletionItemForUnaryBinary(unary, protocol.name)
                     }
@@ -87,7 +96,7 @@ fun createCompletionItemFromResult(
 
                     val keywordCompletions = protocol.keywordMsgs.values.map { kw ->
                         CompletionItem().also {
-                            it.detail = "$type -> ${kw.returnType} " //+ "Pkg: " + kw.pkg
+                            it.detail = "$currentType -> ${kw.returnType} " //+ "Pkg: " + kw.pkg
                             it.kind = CompletionItemKind.Function
                             it.insertTextFormat = InsertTextFormat.Snippet
                             it.sortText = protocol.name
@@ -138,6 +147,7 @@ fun createCompletionItemFromResult(
                         completions.addAll(binaryCompletions)
                     }
                 }
+                }
 
                 if (type is Type.UserLike) {
                     completions.add(CompletionItem().also {
@@ -145,7 +155,6 @@ fun createCompletionItemFromResult(
                         it.label = type.fields.joinToString(" ") { x -> x.toString() }
                         it.kind = CompletionItemKind.Constructor
                         it.insertTextFormat = InsertTextFormat.Snippet
-                        it
                         it.insertText =
                             constructInsertText(type.fields)
                     })
