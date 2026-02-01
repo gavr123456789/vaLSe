@@ -1,3 +1,6 @@
 
 `./gradlew installDist`  
-Instructions are here: https://github.com/gavr123456789/niva-vscode-bundle
+
+Instructions for plugins:
+- VS Code: https://github.com/gavr123456789/niva-vscode-bundle  
+- Zed: https://github.com/gavr123456789/zed-niva
