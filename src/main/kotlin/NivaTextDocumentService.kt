@@ -42,29 +42,31 @@ class NivaTextDocumentService() : TextDocumentService {
 
 
     override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
-        client.info("completion")
+//        client.info("completion")
 
         val realCompletions = onCompletion1(ls, position, client, sourceChanged, lastPathChangedUri)
         return CompletableFuture.completedFuture(Either.forRight(CompletionList(realCompletions)))
     }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
-        client.info("didOpen")
+//        client.info("didOpen")
         if (compiledAllFiles == false) {
             didOpen(params.textDocument.uri, params.textDocument.text)
-            client.info("starting to watch")
-            ls.runDevModeWatching(lspScope) { client.info("DEV_MODE $it") }
+//            client.info("starting to watch")
+            ls.runDevModeWatching(lspScope) {
+//                client.info("DEV_MODE $it")
+            }
         }
 
     }
 
     override fun references(params: ReferenceParams): CompletableFuture<List<Location?>?>? {
-        client.info("references call")
+//        client.info("references call")
         return super.references(params)
     }
 
     override fun definition(params: DefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
-        client.info("This is definition CALL with params.position.line: ${params.position.line}")
+//        client.info("This is definition CALL with params.position.line: ${params.position.line}")
         val result = onDefinition(ls, client, params.textDocument.uri, params.position)
 
 
@@ -78,21 +80,21 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun typeDefinition(params: TypeDefinitionParams?): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
-        client.info("This is typeDefinition CALL with $params")
+//        client.info("This is typeDefinition CALL with $params")
 
         return super.typeDefinition(params)
     }
 
     fun didOpen(textDocumentUri: String, textDocumentText: String?) {
         try {
-            client.info("1111 didOpen resolve all")
+//            client.info("1111 didOpen resolve all")
             // если первый раз была ошибка и мы ререзолвим все снова, то происходит чтение файлов, читаются старые файлы, и получается резолвятся старые файлы с ошибкой
 //            clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
 
             val resolver = ls.resolveAllFirstTime(textDocumentUri, true, textDocumentText)
-            client.info("2222 did open all files resolved")
-            client.info("2222 ls.getAllFilesURIs() = ${ls.getAllFilesURIs()}")
-            client.info("2222 textDocumentUri = $textDocumentUri")
+//            client.info("2222 did open all files resolved")
+//            client.info("2222 ls.getAllFilesURIs() = ${ls.getAllFilesURIs()}")
+//            client.info("2222 textDocumentUri = $textDocumentUri")
             clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
 
             @Suppress("SENSELESS_COMPARISON")
@@ -102,13 +104,13 @@ class NivaTextDocumentService() : TextDocumentService {
             if (textDocumentText != null)
                 this.sourceChanged = textDocumentText
             lastPathChangedUri = textDocumentUri
-            client.info("lastPathChangedUri = ${lastPathChangedUri}")
+//            client.info("lastPathChangedUri = ${lastPathChangedUri}")
 
             compiledAllFiles = true // we need that because opening a new file will thiger did open again
 
         } catch (e: CompilerError) {
-            client.info("2222 didOpen CompilerError = ${e.message?.removeColors()}")
-            client.info("2222 didOpen e.token.file = ${e.token.file}")
+//            client.info("2222 didOpen CompilerError = ${e.message?.removeColors()}")
+//            client.info("2222 didOpen e.token.file = ${e.token.file}")
 
             compiledAllFiles = false
 
@@ -129,7 +131,7 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun didClose(params: DidCloseTextDocumentParams) {
-        client.info("didClose")
+//        client.info("didClose")
         // we cant detect on delete events
         // so just rerun first time compilation when some file closes
         // because when they deleted they 100% closes
@@ -138,7 +140,7 @@ class NivaTextDocumentService() : TextDocumentService {
         if (pm != null) {
             val uri = File(pm.pathToNivaMainFile).toURI().toString()
             // null because we need it to reread all the files
-            client.info("reresolve everything because file closed")
+//            client.info("reresolve everything because file closed")
 
             // reboot nonIncrementalStore
             ls.nonIncrementalStore.clear()
@@ -157,7 +159,7 @@ class NivaTextDocumentService() : TextDocumentService {
             if (compiledAllFiles && ls.resolver != null)
                 resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
             else {
-                client.info("not all files was resolved from first, so trying full resolve ")
+//                client.info("not all files was resolved from first, so trying full resolve ")
                 didOpen(params.textDocument.uri, sourceChanged)
             }
         }
@@ -173,13 +175,16 @@ fun Token.toURI(): String =
 fun LS.getAllFilesURIs(): List<String> =
     fileToDecl.keys.map { Path.of(it).toUri().toString() }
 
+fun String.toUriString(): String =
+    Path.of(this).toUri().toString()
+
 fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
     try {
-        client.info("1111 resolveNonIncremental uri=$uri")
+//        client.info("1111 resolveNonIncremental uri=$uri")
 //        ls.resolveIncremental(uri, sourceChanged)
         ls.resolver = ls.resolveNonIncremental(uri, sourceChanged)
         clearAllErrors(client, ls.getAllFilesURIs(), uri)
-        client.info("2222 RESOLVED NO ERRORS")
+//        client.info("2222 RESOLVED NO ERRORS")
     } catch (e: OnCompletionException) {
         client.info("2222 OnCompletionException ${e.scope}, ${e.errorMessage}")
 //        client.info("userTypes.count = ${ls.resolver.typeDB.userTypes.keys}")

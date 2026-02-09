@@ -18,11 +18,11 @@ class NivaWorkspaceService : WorkspaceService {
 //    val workspaces: MutableList<WorkspaceFolder> = mutableListOf()
 
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
-        client.info("didChangeWatchedFiles! params = $params")
+//        client.info("didChangeWatchedFiles! params = $params")
     }
 
     override fun didChangeWorkspaceFolders(params: DidChangeWorkspaceFoldersParams) {
-        client.info("didChangeWorkspaceFolders! params = $params")
+//        client.info("didChangeWorkspaceFolders! params = $params")
 
 
 //        val event = params.event
@@ -50,7 +50,7 @@ class NivaWorkspaceService : WorkspaceService {
     }
 
     override fun willCreateFiles(params: CreateFilesParams?): CompletableFuture<WorkspaceEdit?>? {
-        client.info("willCreateFiles! params = $params")
+//        client.info("willCreateFiles! params = $params")
         return super.willCreateFiles(params)
     }
     override fun willDeleteFiles(params: DeleteFilesParams?): CompletableFuture<WorkspaceEdit?>? {
@@ -64,7 +64,7 @@ class NivaWorkspaceService : WorkspaceService {
 
 
     override fun resolveWorkspaceSymbol(workspaceSymbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol?>? {
-        client.info("!!resolveWorkspaceSymbol $workspaceSymbol")
+//        client.info("!!resolveWorkspaceSymbol $workspaceSymbol")
 
         return CompletableFuture.completedFuture(workspaceSymbol)
 //        return super.resolveWorkspaceSymbol(workspaceSymbol)

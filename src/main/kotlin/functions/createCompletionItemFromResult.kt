@@ -29,7 +29,7 @@ fun createCompletionItemFromResult(
 
     when (lspResult) {
         is LspResult.Found -> {
-            client.info("LspResult.Found completion for ${lspResult.statement} on ${lspResult.statement.token.relPos}")
+//            client.info("LspResult.Found completion for ${lspResult.statement} on ${lspResult.statement.token.relPos}")
             val st = lspResult.statement
             val expr = if (st is VarDeclaration) st.value else st
 //            client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
@@ -184,7 +184,7 @@ fun createCompletionItemFromResult(
                     })
                 }
 
-                client.info("type is Union = ${type is Type.Union}")
+//                client.info("type is Union = ${type is Type.Union}")
 
                 // union variants
                 if (type is Type.UnionRootType && expr is IdentifierExpr) {
@@ -273,9 +273,9 @@ fun createCompletionItemFromResult(
         }
 
         is LspResult.ScopeSuggestion -> {
-            client.info("LspResult.ScopeSuggestion")
+//            client.info("LspResult.ScopeSuggestion")
             if (lspResult.scope.isNotEmpty()) {
-                client.info("new variant - getting completion items from scope suggestion")
+//                client.info("new variant - getting completion items from scope suggestion")
                 completions.addAll(lspResult.scope.map { k ->
                     CompletionItem(k.key).also {
                         it.kind = CompletionItemKind.Variable
@@ -286,7 +286,7 @@ fun createCompletionItemFromResult(
         }
 
         is LspResult.NotFoundFile -> {
-            client.info("LspResult.NotFoundFile")
+//            client.info("LspResult.NotFoundFile")
         }
 
     }
