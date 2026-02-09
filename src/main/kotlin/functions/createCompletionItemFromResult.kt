@@ -76,8 +76,11 @@ fun createCompletionItemFromResult(
                     }
                 }
 
+                // collecting all messages from all parents up to Any
                 val anyType = ls.resolver.typeDB.internalTypes["Any"]!!
 
+
+                // parent == null => Any
                 val seq = generateSequence(type) { it.parent }.toMutableList()
                 if (seq.last().name != "Any") {
                     seq += anyType
@@ -101,7 +104,6 @@ fun createCompletionItemFromResult(
                             it.insertTextFormat = InsertTextFormat.Snippet
                             it.sortText = protocol.name
                             addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
-
                             val label = kw.argTypes.joinToString(" ") { x -> x.toString() }
                             it.label = label // from: Int to: String
 

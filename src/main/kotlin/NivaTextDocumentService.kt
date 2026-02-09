@@ -21,6 +21,7 @@ import org.example.functions.onHover
 import org.example.functions.documentSymbol
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import kotlin.time.measureTime
 
@@ -165,38 +166,12 @@ class NivaTextDocumentService() : TextDocumentService {
 
     }
 }
-//
-//fun resolveAllFiles(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
-//
-//    try {
-//        client.info("1111 resolveSingleFile")
-//        ls.resolveIncremental(uri, sourceChanged)
-//        client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
-////        client.refreshDiagnostics()
-//        client.info("2222 RESOLVED NO ERRORS")
-//
-//    } catch (e: OnCompletionException) {
-//        client.info("2222 OnCompletionException ${e.scope}")
-//        ls.completionFromScope = e.scope
-//        val errorMessage = e.errorMessage
-//        val token = e.token
-//        if (needShowErrors && errorMessage != null && token != null) {
-//            showError(client, uri, token, errorMessage)
-//        }
-//    } catch (e: CompilerError) {
-//        client.info("2222 Compiler error e = ${e.message?.removeColors()}")
-//        if (needShowErrors) {
-//            showError(client, uri, e.token, e.noColorsMsg)
-//        }
-//    }
-//}
-fun Token.toURI(): String =
-    file.toURI().toString()
 
-fun LS.getAllFilesURIs() =
-    fileToDecl.keys.map{
-        File(it).toURI().toString()
-    }
+fun Token.toURI(): String =
+    file.toPath().toUri().toString()
+
+fun LS.getAllFilesURIs(): List<String> =
+    fileToDecl.keys.map { Path.of(it).toUri().toString() }
 
 fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
     try {
