@@ -23,7 +23,7 @@ import org.example.functions.toStringWithReceiver
 
 fun createCompletionItemFromResult(
     lspResult: LspResult, client: LanguageClient, sourceChanged: String?, line: Int, character: Int, ls: LS,
-    lastPathChangedUri: String?
+    lastPathChangedUri: String?, requestUri: String
 ): MutableList<CompletionItem> {
     val completions = mutableListOf<CompletionItem>()
 
@@ -35,6 +35,8 @@ fun createCompletionItemFromResult(
 //            client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
             if (expr is Expression) {
                 val type = expr.type!!
+                val matchContext = resolveMatchContext(expr, sourceChanged, line, requestUri, lastPathChangedUri, client)
+                val matchIndent = matchContext.indent
                 val isPipeNeeded = expr is KeywordMsg && (!expr.isCascade || expr.isPiped)
                 val pipeIfNeeded = if (isPipeNeeded) ", " else ""
 
@@ -189,16 +191,27 @@ fun createCompletionItemFromResult(
                 // union variants
                 if (type is Type.UnionRootType && expr is IdentifierExpr) {
 //                    client.info("type is Union")
-                    val pos = exrPosition(expr, client::info).also { it.end.character = character; it.start.character = 0 }
+                    val pos = exrPosition(expr, client::info).also {
+                        it.end.character = character
+                        it.start.character = matchContext.replaceStart
+                    }
                     // collect all union branches
-                    val deep = type.stringAllBranches(expr.name, deep = true)
-                    val notDeep = type.stringAllBranches(expr.name, deep = false)
+                    val deep = formatMatchSnippet(
+                        type.stringAllBranches(expr.name, deep = true),
+                        matchIndent,
+                        expr.toStringWithReceiver()
+                    )
+                    val notDeep = formatMatchSnippet(
+                        type.stringAllBranches(expr.name, deep = false),
+                        matchIndent,
+                        expr.toStringWithReceiver()
+                    )
                     val complItem = { text: String, deep: Boolean ->
+                        val finalText = if (matchContext.needsNewline) "\n$text" else text
                         CompletionItem().also {
                             it.kind = CompletionItemKind.Snippet
                             it.label = if (deep) "match deep" else "match"
-                            it.insertText = text
-                            it.additionalTextEdits = listOf(TextEdit(pos, ""))
+                            it.textEdit = Either.forLeft(TextEdit(pos, finalText))
                         }
                     }
 //                    client.info("expr = $expr\ndeep replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
@@ -209,7 +222,7 @@ fun createCompletionItemFromResult(
                 // bool variants
                 // union variants
                 if (type.name == "Bool") {
-                    fun boolMatch(exprMatchOn: String,): String {
+                    fun boolMatch(exprMatchOn: String): String {
                         val unions = listOf("true", "false")
                         return buildString {
                             // | ident
@@ -218,27 +231,33 @@ fun createCompletionItemFromResult(
                                 append("| ", union, " => ", "[]")
                                 if (i != unions.count() - 1) append("\n")
                             }
-                            sasat(expr.token.relPos.start)
                         }
                     }
 
-                    val pos = exrPosition(expr, client::info).also { it.end.character = character; it.start.character = 0 }
+                    val pos = exrPosition(expr, client::info).also {
+                        it.end.character = character
+                        it.start.character = matchContext.replaceStart
+                    }
                     fun complItem(text: String): CompletionItem {
+                        val finalText = if (matchContext.needsNewline) "\n$text" else text
                         return CompletionItem().also {
                             it.kind = CompletionItemKind.Snippet
                             it.label = "matchBool"
-                            it.insertText = text
-                            it.additionalTextEdits = listOf(TextEdit(pos, ""))
+                            it.textEdit = Either.forLeft(TextEdit(pos, finalText))
                         }
                     }
-                    val text = boolMatch(expr.toStringWithReceiver())
+                    val text = formatMatchSnippet(
+                        boolMatch(expr.toStringWithReceiver()),
+                        matchIndent,
+                        expr.toStringWithReceiver()
+                    )
 //                    client.info("expr = $expr\n replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
 
                     completions.add(complItem(text))
                 }
                 // null match
                 if (type is Type.NullableType) {
-                    fun nullMatch(exprMatchOn: String,): String {
+                    fun nullMatch(exprMatchOn: String): String {
                         return buildString {
                             // | ident
                             val insertText = if (expr is IdentifierExpr)
@@ -248,23 +267,28 @@ fun createCompletionItemFromResult(
                             appendLine("| $exprMatchOn")
                             appendLine("| null => []")
                             appendLine($$"|=> [${1:$$insertText}]")
-                            client.info(expr.token.relPos.start.toString())
-                            sasat(expr.token.relPos.start)
 
                         }
                     }
 
-                    val pos = exrPosition(expr, client::info).also { it.end.character = character; it.start.character = 0 }
+                    val pos = exrPosition(expr, client::info).also {
+                        it.end.character = character
+                        it.start.character = matchContext.replaceStart
+                    }
                     fun complItem(text: String): CompletionItem {
+                        val finalText = if (matchContext.needsNewline) "\n$text" else text
                         return CompletionItem().also {
                             it.kind = CompletionItemKind.Snippet
                             it.label = "matchNull"
-                            it.insertText = text
                             it.insertTextFormat = InsertTextFormat.Snippet
-                            it.additionalTextEdits = listOf(TextEdit(pos, ""))
+                            it.textEdit = Either.forLeft(TextEdit(pos, finalText))
                         }
                     }
-                    val text = nullMatch(expr.toStringWithReceiver())
+                    val text = formatMatchSnippet(
+                        nullMatch(expr.toStringWithReceiver()),
+                        matchIndent,
+                        expr.toStringWithReceiver()
+                    )
 //                    client.info("expr = $expr\n replace, pos = $pos,\nexpr.token.pos.start = ${expr.token.pos.start},\nexpr.token.pos.end = ${expr.token.pos.end})")
 
                     completions.add(complItem(text))
@@ -294,11 +318,55 @@ fun createCompletionItemFromResult(
     return completions
 }
 
-fun StringBuilder.sasat(ident: Int) {
-    val strIdent = " ".repeat(ident)
-    for (i in lastIndex downTo 0) {
-        if (i == 0 || this[i - 1] == '\n') {
-            insert(i, strIdent) // вставляем пробелы
-        }
+data class MatchContext(val indent: String, val replaceStart: Int, val needsNewline: Boolean)
+
+fun resolveMatchContext(
+    expr: Expression,
+    sourceChanged: String?,
+    line: Int,
+    requestUri: String,
+    lastPathChangedUri: String?,
+    client: LanguageClient
+): MatchContext {
+    val lineText = resolveLineText(sourceChanged, line, requestUri, lastPathChangedUri)
+    val exprStart = exrPosition(expr, client::info).start.character
+
+    if (lineText != null) {
+        val prefix = lineText.take(exprStart)
+        val prefixIsWhitespace = prefix.all { it == ' ' || it == '\t' }
+        val lineIndent = lineText.takeWhile { it == ' ' || it == '\t' }
+        val indent = if (prefixIsWhitespace) prefix else lineIndent
+        val replaceStart = if (prefixIsWhitespace) 0 else exprStart
+        return MatchContext(indent, replaceStart, !prefixIsWhitespace)
+    }
+
+    val fallbackIndent = if (exprStart > 0) " ".repeat(exprStart) else ""
+    return MatchContext(fallbackIndent, exprStart, exprStart > 0)
+}
+
+fun resolveLineText(sourceChanged: String?, line: Int, requestUri: String, lastPathChangedUri: String?): String? {
+    if (sourceChanged == null) return null
+    if (lastPathChangedUri != null && lastPathChangedUri != requestUri) return null
+
+    return sourceChanged.lineSequence().drop(line).firstOrNull()
+}
+
+fun formatMatchSnippet(raw: String, indent: String, exprText: String? = null): String {
+    val rawLines = raw.split('\n').map { it.trimStart() }.filter { it.isNotEmpty() }
+    val branchLines = if (rawLines.isNotEmpty() && !rawLines[0].contains("=>")) rawLines.drop(1) else rawLines
+
+    val lines = mutableListOf<String>()
+    val head = exprText ?: rawLines.firstOrNull()?.takeIf { !it.contains("=>") }
+    if (head != null) {
+        lines.add(head)
+    }
+    lines.addAll(branchLines)
+
+    val withPipes = lines.map { line ->
+        if (line.startsWith("|")) line else "| " + line
+    }
+
+    return withPipes.joinToString("\n") { line ->
+        if (line.isEmpty()) indent else indent + line
     }
 }

@@ -63,8 +63,6 @@ fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Se
 //    client.info("position.line (${position.line}) is found!")
 
 
-
-
     return lineOfStatements.asSequence()
         .map { it.first }
         .filter {
@@ -88,7 +86,7 @@ fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Se
 
 
             val multiLine =
-                isItMultilineTok &&
+                        isItMultilineTok &&
                         ((onTheFirstLine && cursorPos >= relPos.start) ||
                         (onTheLastLine && cursorPos <= relPos.end) ||
                         (inBetween))
