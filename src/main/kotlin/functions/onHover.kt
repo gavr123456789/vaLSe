@@ -33,8 +33,8 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
         .forEach {
             when (it) {
                 is VarDeclaration -> {
-                    val docText = extractDocCommentFromType(it.value.type!!) ?: ""
-                    ls.info?.let { it1 -> it1("onhover VAR DECL ${it}\n ${it.token.relPos}") }
+                    val docText = if (it.value.type != null) extractDocCommentFromType(it.value.type!!) else ""
+//                    client.info("onhover VAR DECL ${it}\n ${it.token.relPos}") }
                     return createHover(it.token, it.value.type!!.toString() + docText)
                 }
 
@@ -46,7 +46,7 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
                             ?: it.msgMetaData?.docComment?.text
                             ?: extractDocCommentFromType(type)) ?: ""
 
-                    ls.info?.let { it1 -> it1("onhover MSG ${it}\n ${it.token.relPos} \n ${it.msgMetaData}") }
+//                    client.info("onhover MSG ${it}\n ${it.token.relPos} \n ${it.msgMetaData}") }
                     return createHover(it.token, type.toString() + if (docText.isNotEmpty()) "\n\n$docText" else "")
                 }
 
@@ -54,7 +54,7 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
                     val type = it.type
                     if (type != null) {
                         val docText = extractDocCommentFromType(type) ?: ""
-                        ls.info?.let { it1 -> it1("onhover EXPR ${it}\n ${it.token.relPos}") }
+//                        client.info("onhover EXPR ${it}\n ${it.token.relPos}")
                         return createHover(it.token, type.toString() + docText)
                     }
                 }

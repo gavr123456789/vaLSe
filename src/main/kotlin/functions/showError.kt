@@ -10,11 +10,11 @@ import org.eclipse.lsp4j.services.LanguageClient
 
 
 fun clearAllErrors(client: LanguageClient, allURI: List<String>, currentFileURI: String) {
-    client.info(":::13 Clearing All Errors for $currentFileURI")
+//    client.info(":::13 Clearing All Errors for $currentFileURI")
     client.publishDiagnostics(PublishDiagnosticsParams(currentFileURI, listOf()))
 
     allURI.forEach { uri ->
-        client.info(":::17 Clearing All Errors for $uri")
+//        client.info(":::17 Clearing All Errors for $uri")
         client.publishDiagnostics(PublishDiagnosticsParams(uri, listOf()))
     }
 
@@ -40,10 +40,10 @@ fun showError(client: LanguageClient, t: Token, message: String, otherURI: List<
     )
 
     otherURI.forEach { uri ->
-        client.info(":::43 publishDiagnostics ${uri.toUriString()}")
+//        client.info(":::43 publishDiagnostics ${uri.toUriString()}")
         client.publishDiagnostics(PublishDiagnosticsParams(uri.toUriString(), listOf()))
     }
 
-    client.info(":::46 publishDiagnostics ${t.toURI()}")
+//    client.info(":::46 publishDiagnostics ${t.toURI()}")
     client.publishDiagnostics(PublishDiagnosticsParams(t.toURI(), listOf(d)))
 }

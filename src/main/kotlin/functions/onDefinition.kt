@@ -7,6 +7,7 @@ import main.frontend.parser.types.ast.IdentifierExpr
 import main.frontend.parser.types.ast.Message
 import main.frontend.parser.types.ast.Statement
 import main.languageServer.LS
+import main.languageServer.toPositionKey
 import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
@@ -14,10 +15,6 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.example.info
 import java.io.File
 import java.net.URI
-
-
-//fun main.frontend.meta.Position.toLspPosition(line: Int) =
-//    Range(Position(line - 1, if (start != 0) start else 0), Position(line - 1, end))
 
 fun Token.toLspPosition(): Range {
     val start = relPos.start
@@ -140,6 +137,13 @@ fun onDefinition(ls: LS, client: LanguageClient, uri: String, position: Position
                 val type = statement.type
                 if (type is Type.UserLike && type.typeDeclaration != null) {
                     result.add(tokenToLocationLink(statement.token, type.typeDeclaration!!.token))
+                }
+            }
+            if (statement is IdentifierExpr && !statement.isType) {
+                val usageKey = statement.token.toPositionKey()
+                val declarationToken = ls.varUsageToDeclaration[usageKey]
+                if (declarationToken != null) {
+                    result.add(tokenToLocationLink(statement.token, declarationToken))
                 }
             }
             if (statement is Message && statement.declaration != null) {
