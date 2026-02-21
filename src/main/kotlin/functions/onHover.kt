@@ -33,7 +33,9 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
         .forEach {
             when (it) {
                 is VarDeclaration -> {
-                    val docText = if (it.value.type != null) extractDocCommentFromType(it.value.type!!) else ""
+                    val docText = it.value.type
+                        ?.let { t -> extractDocCommentFromType(t) }
+                        .orEmpty()
 //                    client.info("onhover VAR DECL ${it}\n ${it.token.relPos}") }
                     return createHover(it.token, it.value.type!!.toString() + docText)
                 }

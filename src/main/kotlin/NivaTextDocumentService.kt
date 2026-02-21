@@ -90,12 +90,12 @@ class NivaTextDocumentService() : TextDocumentService {
 //            client.info("1111 didOpen resolve all")
             // если первый раз была ошибка и мы ререзолвим все снова, то происходит чтение файлов, читаются старые файлы, и получается резолвятся старые файлы с ошибкой
 //            clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
+            clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
 
             val resolver = ls.resolveAllFirstTime(textDocumentUri, true, textDocumentText)
 //            client.info("2222 did open all files resolved")
 //            client.info("2222 ls.getAllFilesURIs() = ${ls.getAllFilesURIs()}")
 //            client.info("2222 textDocumentUri = $textDocumentUri")
-            clearAllErrors(client, ls.getAllFilesURIs(), textDocumentUri)
 
             @Suppress("SENSELESS_COMPARISON")
             if (resolver != null) {

@@ -8,7 +8,6 @@ import org.eclipse.lsp4j.services.LanguageClient
 import java.io.InputStream
 import java.io.OutputStream
 
-
 fun main() {
 
     val start = { `in`: InputStream?, out: OutputStream? ->
@@ -44,5 +43,25 @@ fun onCompletion1(
         lastPathChangedUri,
         position.textDocument.uri
     )
+
+    // Fallback: if no completions from LSP, lets complete words
+    if (completionItems.isEmpty() && sourceChanged != null) {
+        val words = extractWordsFromText(sourceChanged)
+        completionItems.addAll(words.map { word ->
+            CompletionItem(word).apply {
+                kind = CompletionItemKind.Text
+                sortText = "zzz$word" // always at the end
+            }
+        })
+    }
+
     return completionItems
+}
+
+fun extractWordsFromText(text: String): Set<String> {
+    val wordPattern = Regex("\\b\\w+\\b")
+    return wordPattern.findAll(text)
+        .map { it.value }
+        .filter { it.length > 2 }
+        .toSet()
 }
