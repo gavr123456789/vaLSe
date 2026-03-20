@@ -109,7 +109,7 @@ class NivaTextDocumentService() : TextDocumentService {
             compiledAllFiles = true // we need that because opening a new file will thiger did open again
 
         } catch (e: CompilerError) {
-//            client.info("2222 didOpen CompilerError = ${e.message?.removeColors()}")
+            client.info("2222 didOpen CompilerError = ${e.message?.removeColors()}")
 //            client.info("2222 didOpen e.token.file = ${e.token.file}")
 
             compiledAllFiles = false

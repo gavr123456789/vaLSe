@@ -186,6 +186,39 @@ fun createCompletionItemFromResult(
                     })
                 }
 
+                // enum match
+                if (type is Type.EnumRootType) {
+                    fun enumMatch(exprMatchOn: String): String {
+                        return buildString {
+                            append("| $exprMatchOn\n")
+                            type.branches.forEachIndexed { i, branch ->
+                                val qualified = "${type.name}.${branch.name}"
+                                append("| ", qualified, " => ", "[]")
+                                if (i != type.branches.count() - 1) append("\n")
+                            }
+                        }
+                    }
+
+                    val pos = exrPosition(expr, client::info).also {
+                        it.end.character = character
+                        it.start.character = matchContext.replaceStart
+                    }
+                    fun complItem(text: String): CompletionItem {
+                        val finalText = if (matchContext.needsNewline) "\n$text" else text
+                        return CompletionItem().also {
+                            it.kind = CompletionItemKind.Snippet
+                            it.label = "matchEnum"
+                            it.textEdit = Either.forLeft(TextEdit(pos, finalText))
+                        }
+                    }
+                    val text = formatMatchSnippet(
+                        enumMatch(expr.toStringWithReceiver()),
+                        matchIndent,
+                        expr.toStringWithReceiver()
+                    )
+                    completions.add(complItem(text))
+                }
+
 //                client.info("type is Union = ${type is Type.Union}")
 
                 // union variants
