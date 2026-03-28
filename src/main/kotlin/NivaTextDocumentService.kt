@@ -18,6 +18,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.example.functions.onDefinition
 import org.example.functions.onHover
+import org.example.functions.onReferences
 import org.example.functions.documentSymbol
 import java.io.File
 import java.net.URI
@@ -61,8 +62,8 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun references(params: ReferenceParams): CompletableFuture<List<Location?>?>? {
-//        client.info("references call")
-        return super.references(params)
+        val result = onReferences(ls, client, params)
+        return CompletableFuture.completedFuture(result)
     }
 
     override fun definition(params: DefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {

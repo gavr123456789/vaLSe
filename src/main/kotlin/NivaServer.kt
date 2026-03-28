@@ -18,6 +18,7 @@ class NivaServer : LanguageServer, LanguageClientAware {
         capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
         capabilities.completionProvider = CompletionOptions()
         capabilities.definitionProvider = Either.forLeft(true)
+        capabilities.referencesProvider = Either.forLeft(true)
         capabilities.hoverProvider = Either.forLeft(true)
         capabilities.documentSymbolProvider = Either.forLeft(true)
         capabilities.workspace = WorkspaceServerCapabilities(
