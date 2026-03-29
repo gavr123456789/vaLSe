@@ -4,7 +4,10 @@ import frontend.resolver.Type
 import main.frontend.meta.Token
 import main.frontend.parser.types.ast.Expression
 import main.frontend.parser.types.ast.IdentifierExpr
+import main.frontend.parser.types.ast.KeywordLikeType
+import main.frontend.parser.types.ast.KeywordMsg
 import main.frontend.parser.types.ast.Message
+import main.frontend.parser.types.ast.UnaryMsg
 import main.frontend.parser.types.ast.Statement
 import main.languageServer.LS
 import main.languageServer.toPositionKey
@@ -12,7 +15,6 @@ import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.services.LanguageClient
-import org.example.info
 import java.io.File
 import java.net.URI
 
@@ -26,7 +28,7 @@ fun Token.toLspPosition(): Range {
         Range(Position(line - 1, if (start != 0) start else 0), Position(line - 1, end))
 }
 
-fun exrPosition(expr: Expression, log: (String) -> Unit): Range {
+fun exrPosition(expr: Expression): Range {
     return if (expr is Message) {
         val q = expr.token.toLspPosition()
         val result = Range(expr.receiver.token.toLspPosition().start, q.end)
@@ -43,7 +45,7 @@ fun Expression.toStringWithReceiver(): String {
     }
 }
 
-fun newFind(ls: LS, client: LanguageClient, uri: String, position: Position): Sequence<Statement> {
+fun newFind(ls: LS, uri: String, position: Position): Sequence<Statement> {
 
     val absolutePath = File(URI(uri)).absolutePath
     val lineToSetOfStatements = ls.megaStore.data[absolutePath] ?: return emptySequence()
@@ -131,7 +133,7 @@ fun onDefinition(ls: LS, client: LanguageClient, uri: String, position: Position
 
     val result = mutableListOf<LocationLink>()
 
-    newFind(ls, client, uri, position)
+    newFind(ls, uri, position)
         .forEach { statement ->
             if (statement is IdentifierExpr && statement.isType) {
                 val type = statement.type
@@ -147,13 +149,21 @@ fun onDefinition(ls: LS, client: LanguageClient, uri: String, position: Position
                 }
             }
             if (statement is Message && statement.declaration != null) {
-                client.info("MESsASASGE go to decl")
-                val targetToken = statement.declaration!!.token
+                val decl = statement.declaration ?: return@forEach
+                val targetToken = decl.token
                 result.add(tokenToLocationLink(statement.token, targetToken))
+            } else if (statement is KeywordMsg && statement.kind == KeywordLikeType.Constructor) {
+                val receiverType = statement.receiver.type
+                if (receiverType is Type.UserLike && receiverType.typeDeclaration != null) {
+                    result.add(tokenToLocationLink(statement.token, receiverType.typeDeclaration!!.token))
+                }
+            } else if (statement is UnaryMsg && statement.selectorName == "new") {
+                val receiverType = statement.receiver.type
+                if (receiverType is Type.UserLike && receiverType.typeDeclaration != null) {
+                    result.add(tokenToLocationLink(statement.token, receiverType.typeDeclaration!!.token))
+                }
             }
         }
 
     return result
 }
-
-

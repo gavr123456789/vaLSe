@@ -19,6 +19,7 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.example.functions.onDefinition
 import org.example.functions.onHover
 import org.example.functions.onReferences
+import org.example.functions.onRename
 import org.example.functions.documentSymbol
 import java.io.File
 import java.net.URI
@@ -62,7 +63,12 @@ class NivaTextDocumentService() : TextDocumentService {
     }
 
     override fun references(params: ReferenceParams): CompletableFuture<List<Location?>?>? {
-        val result = onReferences(ls, client, params)
+        val result = onReferences(ls, params)
+        return CompletableFuture.completedFuture(result)
+    }
+
+    override fun rename(params: RenameParams): CompletableFuture<WorkspaceEdit?> {
+        val result = onRename(ls, client, params)
         return CompletableFuture.completedFuture(result)
     }
 

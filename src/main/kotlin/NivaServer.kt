@@ -19,6 +19,7 @@ class NivaServer : LanguageServer, LanguageClientAware {
         capabilities.completionProvider = CompletionOptions()
         capabilities.definitionProvider = Either.forLeft(true)
         capabilities.referencesProvider = Either.forLeft(true)
+        capabilities.renameProvider = Either.forLeft(true)
         capabilities.hoverProvider = Either.forLeft(true)
         capabilities.documentSymbolProvider = Either.forLeft(true)
         capabilities.workspace = WorkspaceServerCapabilities(
@@ -52,7 +53,7 @@ class NivaServer : LanguageServer, LanguageClientAware {
         exitProcess(errorCode)
     }
 
-    override fun getTextDocumentService(): TextDocumentService? {
+    override fun getTextDocumentService(): TextDocumentService {
         return textDocumentService
     }
 
