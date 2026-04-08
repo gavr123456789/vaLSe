@@ -5,6 +5,7 @@ import main.languageServer.onCompletion
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
+import org.example.functions.extractWordsFromText
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -58,10 +59,3 @@ fun onCompletion1(
     return completionItems
 }
 
-fun extractWordsFromText(text: String): Set<String> {
-    val wordPattern = Regex("\\b\\w+\\b")
-    return wordPattern.findAll(text)
-        .map { it.value }
-        .filter { it.length > 2 }
-        .toSet()
-}

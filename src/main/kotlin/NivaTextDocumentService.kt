@@ -10,7 +10,7 @@ import main.frontend.meta.removeColors
 import main.languageServer.LS
 import main.languageServer.OnCompletionException
 import main.languageServer.resolveAllFirstTime
-import main.languageServer.resolveNonIncremental
+import main.languageServer.resolveIncremental
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -158,14 +158,17 @@ class NivaTextDocumentService() : TextDocumentService {
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         val sourceChanged = params.contentChanges.first().text
+        val previousText = if (this.lastPathChangedUri == params.textDocument.uri) this.sourceChanged else null
+        val changeLine = findFirstChangedLine(previousText, sourceChanged)
 
         this.sourceChanged = sourceChanged
         this.lastPathChangedUri = params.textDocument.uri
 
         val fullCompTime = measureTime {
-            if (compiledAllFiles && ls.resolver != null)
-                resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true)
-            else {
+            val canResolveIncrementally = ls.resolver != null
+            if (compiledAllFiles || canResolveIncrementally) {
+                resolveSingleFile(ls, client, params.textDocument.uri, sourceChanged, true, changeLine)
+            } else {
 //                client.info("not all files was resolved from first, so trying full resolve ")
                 didOpen(params.textDocument.uri, sourceChanged)
             }
@@ -185,13 +188,11 @@ fun LS.getAllFilesURIs(): List<String> =
 fun String.toUriString(): String =
     Path.of(this).toUri().toString()
 
-fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean) {
+fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged: String, needShowErrors: Boolean, changeLine: Int?) {
     try {
 //        client.info("1111 resolveNonIncremental uri=$uri")
-//        ls.resolveIncremental(uri, sourceChanged)
-        ls.resolver = ls.resolveNonIncremental(uri, sourceChanged)
+        ls.resolveIncremental(uri, sourceChanged, changeLine)
         clearAllErrors(client, ls.getAllFilesURIs(), uri)
-//        client.info("2222 RESOLVED NO ERRORS")
     } catch (e: OnCompletionException) {
         client.info("2222 OnCompletionException ${e.scope}, ${e.errorMessage}")
 //        client.info("userTypes.count = ${ls.resolver.typeDB.userTypes.keys}")
@@ -211,4 +212,26 @@ fun resolveSingleFile(ls: LS, client: LanguageClient, uri: String, sourceChanged
             showError(client, e.token, e.noColorsMsg, otherURI.toList(), uri)
         }
     }
+}
+
+private fun findFirstChangedLine(oldText: String?, newText: String): Int? {
+    if (oldText == null || oldText == newText) return null
+
+    var i = 0
+    var line = 0
+
+    val oldLen = oldText.length
+    val newLen = newText.length
+
+    while (i < oldLen && i < newLen) {
+        if (oldText[i] != newText[i]) {
+            return line
+        }
+        if (oldText[i] == '\n') {
+            line++
+        }
+        i++
+    }
+
+    return if (oldLen != newLen) line else null
 }

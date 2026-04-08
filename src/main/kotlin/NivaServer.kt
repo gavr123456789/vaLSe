@@ -61,10 +61,6 @@ class NivaServer : LanguageServer, LanguageClientAware {
         return workspaceService
     }
 
-    override fun initialized(params: InitializedParams) {
-        super.initialized(params)
-    }
-
     override fun connect(client: LanguageClient) {
         textDocumentService.client = client
         workspaceService.client = client

@@ -29,7 +29,7 @@ fun extractDocCommentFromType(type: Type): String? {
 fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
 //    client.info("onHover signal")
 
-    newFind(ls, client, params.textDocument.uri, params.position)
+    newFind(ls, params.textDocument.uri, params.position)
         .forEach {
             when (it) {
                 is VarDeclaration -> {

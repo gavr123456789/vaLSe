@@ -199,7 +199,7 @@ fun createCompletionItemFromResult(
                         }
                     }
 
-                    val pos = exrPosition(expr, client::info).also {
+                    val pos = exrPosition(expr).also {
                         it.end.character = character
                         it.start.character = matchContext.replaceStart
                     }
@@ -224,7 +224,7 @@ fun createCompletionItemFromResult(
                 // union variants
                 if (type is Type.UnionRootType && expr is IdentifierExpr) {
 //                    client.info("type is Union")
-                    val pos = exrPosition(expr, client::info).also {
+                    val pos = exrPosition(expr).also {
                         it.end.character = character
                         it.start.character = matchContext.replaceStart
                     }
@@ -267,7 +267,7 @@ fun createCompletionItemFromResult(
                         }
                     }
 
-                    val pos = exrPosition(expr, client::info).also {
+                    val pos = exrPosition(expr).also {
                         it.end.character = character
                         it.start.character = matchContext.replaceStart
                     }
@@ -304,7 +304,7 @@ fun createCompletionItemFromResult(
                         }
                     }
 
-                    val pos = exrPosition(expr, client::info).also {
+                    val pos = exrPosition(expr).also {
                         it.end.character = character
                         it.start.character = matchContext.replaceStart
                     }
@@ -362,7 +362,7 @@ fun resolveMatchContext(
     client: LanguageClient
 ): MatchContext {
     val lineText = resolveLineText(sourceChanged, line, requestUri, lastPathChangedUri)
-    val exprStart = exrPosition(expr, client::info).start.character
+    val exprStart = exrPosition(expr).start.character
 
     if (lineText != null) {
         val prefix = lineText.take(exprStart)
