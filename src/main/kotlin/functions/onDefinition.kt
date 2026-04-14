@@ -53,13 +53,8 @@ fun newFind(ls: LS, uri: String, position: Position): Sequence<Statement> {
 //    client.info("uri = $uri \n\nabsolutePath = \"$absolutePath\" \n\nls.megaStore.data = ${ls.megaStore.data.keys}")
 //    client.info("file found")
 
-    val lineOfStatements =
-        lineToSetOfStatements[position.line + 1] // + 1 since we are count lines from 1 and vsc from 0
-    if (lineOfStatements == null) {
-//        client.info("there are no expr on line (${position.line + 1}), known lines are: ${lineToSetOfStatements.keys}")
-        return emptySequence()
-    }
-//    client.info("position.line (${position.line}) is found!")
+    val lineOfStatements = lineToSetOfStatements[position.line + 1] ?: return emptySequence() // + 1 since we are count lines from 1 and vsc from 0
+    //    client.info("position.line (${position.line}) is found!")
 
 
     return lineOfStatements.asSequence()
