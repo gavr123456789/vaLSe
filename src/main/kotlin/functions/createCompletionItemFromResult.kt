@@ -18,7 +18,6 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
 import org.example.functions.exrPosition
-import org.example.functions.toLspPosition
 import org.example.functions.toStringWithReceiver
 
 fun createCompletionItemFromResult(
@@ -61,7 +60,7 @@ fun createCompletionItemFromResult(
                         it.detail = "$type -> ${msg.returnType} " //+ "Pkg: " + msg.pkg
                         it.kind = CompletionItemKind.Function
 
-                        it.sortText = protocol
+                        it.sortText = protocol + msg.name
 //                        it.filterText = protocol
 //                        it.detail = protocol
                         addDocsAndErrors(msg.errors, msg.docComment ?: msg.declaration?.docComment, it)
@@ -93,9 +92,11 @@ fun createCompletionItemFromResult(
                     val unaryCompletions = protocol.unaryMsgs.values.map { unary ->
                         createCompletionItemForUnaryBinary(unary, protocol.name)
                     }
-                    val binaryCompletions = protocol.binaryMsgs.values.map { binary ->
-                        createCompletionItemForUnaryBinary(binary, protocol.name)
-                    }
+                    val binaryCompletions = protocol.binaryMsgs.values
+                        .filter { it.name != "==" && it.name != "!=" }
+                        .map { binary ->
+                            createCompletionItemForUnaryBinary(binary, protocol.name)
+                        }
 
 
 
@@ -104,23 +105,23 @@ fun createCompletionItemFromResult(
                             it.detail = "$currentType -> ${kw.returnType} " //+ "Pkg: " + kw.pkg
                             it.kind = CompletionItemKind.Function
                             it.insertTextFormat = InsertTextFormat.Snippet
-                            it.sortText = protocol.name
+                            it.sortText = protocol.name + kw.name
                             addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
                             val label = kw.argTypes.joinToString(" ") { x -> x.toString() }
                             it.label = label // from: Int to: String
 
                             val insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
                             it.insertText = insertText
-                            if (lspResult.needBraceWrap ) {
-                                val pos = expr.token.toLspPosition()
-                                pos.end.character = pos.start.character
-
-//                                val endPos = pos.end.character + label.count()
-//                                val posEnd = Range(Position(pos.start.line, endPos), Position(pos.start.line, endPos))
-                                it.insertText = it.insertText + ")"
-//                                client.info("\n$insertText\n$pos\n$posEnd\n")
-                                it.additionalTextEdits = listOf(TextEdit(pos, "(")) //
-                            }
+//                            if (lspResult.needBraceWrap) {
+//                                val pos = expr.token.toLspPosition()
+//                                pos.end.character = pos.start.character
+//
+////                                val endPos = pos.end.character + label.count()
+////                                val posEnd = Range(Position(pos.start.line, endPos), Position(pos.start.line, endPos))
+//                                it.insertText += ")"
+////                                client.info("\n$insertText\n$pos\n$posEnd\n")
+//                                it.additionalTextEdits = listOf(TextEdit(pos, "(")) //
+//                            }
                         }
                     }
 
@@ -130,7 +131,9 @@ fun createCompletionItemFromResult(
                         completions.addAll(protocol.staticMsgs.values.map { kw ->
                             CompletionItem().also {
                                 it.detail = "$type -> ${kw.returnType} " // + "Pkg: " + kw.pkg
-                                it.kind = CompletionItemKind.Function
+                                it.kind = CompletionItemKind.Constructor
+                                it.sortText = "aab"
+
                                 addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
 
                                 if (kw is KeywordMsgMetaData) {
@@ -153,11 +156,12 @@ fun createCompletionItemFromResult(
                 }
                 }
 
-                if (type is Type.UserLike) {
+                if (type is Type.UserLike && expr is IdentifierExpr && expr.isType && type.fields.isNotEmpty()) {
                     completions.add(CompletionItem().also {
 
                         it.label = type.fields.joinToString(" ") { x -> x.toString() }
                         it.kind = CompletionItemKind.Constructor
+                        it.sortText = "aaa"
                         it.insertTextFormat = InsertTextFormat.Snippet
                         it.insertText =
                             constructInsertText(type.fields)
@@ -172,7 +176,7 @@ fun createCompletionItemFromResult(
                             it.label = field.name
                             it.detail = field.type.toString()
                             it.kind = CompletionItemKind.Field
-                            it.sortText = "aaa"
+                            it.sortText = "aaa" + field.name
                         }
                     })
                 }
