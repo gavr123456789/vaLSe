@@ -33,15 +33,15 @@ fun onHover(ls: LS, client: LanguageClient, params: HoverParams): Hover? {
         .forEach {
             when (it) {
                 is VarDeclaration -> {
-                    val docText = it.value.type
-                        ?.let { t -> extractDocCommentFromType(t) }
+                    val type = it.value.type ?: return@forEach
+                    val docText = extractDocCommentFromType(type)
                         .orEmpty()
 //                    client.info("onhover VAR DECL ${it}\n ${it.token.relPos}") }
-                    return createHover(it.token, it.value.type!!.toString() + docText)
+                    return createHover(it.token, type.toString() + docText)
                 }
 
                 is Message -> {
-                    val type = it.type!!
+                    val type = it.type ?: return@forEach
                     // if message decl has comment then add it, over-vice add type comment, shit code for a purpose
                     val docText =
                         (it.declaration?.docComment?.text

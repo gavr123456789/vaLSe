@@ -1,11 +1,11 @@
 package org.example
 
 import main.languageServer.LS
+import main.languageServer.LspResult
 import main.languageServer.onCompletion
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
-import org.example.functions.extractWordsFromText
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -33,7 +33,8 @@ fun onCompletion1(
     val line = position.position.line
     val character = position.position.character
 //    client.info("onCompletion1 on  $line $character")
-    val lspResult = ls.onCompletion(position.textDocument.uri, line, character)
+    val completionSource = if (position.textDocument.uri == lastPathChangedUri) sourceChanged else null
+    val lspResult = ls.onCompletion(position.textDocument.uri, line, character, completionSource)
     val completionItems = createCompletionItemFromResult(
         lspResult,
         client,
@@ -45,17 +46,16 @@ fun onCompletion1(
         position.textDocument.uri
     )
 
-    // Fallback: if no completions from LSP, lets complete words
-    if (completionItems.isEmpty() && sourceChanged != null) {
-        val words = extractWordsFromText(sourceChanged)
-        completionItems.addAll(words.map { word ->
-            CompletionItem(word).apply {
-                kind = CompletionItemKind.Text
-                sortText = "zzz$word" // always at the end
-            }
-        })
+    val resultName = when (lspResult) {
+        is LspResult.Found -> "Found(${lspResult.statement}, type=${(lspResult.statement as? main.frontend.parser.types.ast.Expression)?.type})"
+        is LspResult.ScopeSuggestion -> "ScopeSuggestion(${lspResult.scope.size})"
+        is LspResult.NotFoundFile -> "NotFoundFile"
     }
+    val currentLine = completionSource?.split('\n')?.getOrNull(line)
+    client.info(
+        "completion debug: line=$line char=$character source=${completionSource != null} " +
+            "uriMatch=${position.textDocument.uri == lastPathChangedUri} result=$resultName items=${completionItems.size} text='$currentLine'"
+    )
 
     return completionItems
 }
-

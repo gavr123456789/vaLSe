@@ -16,7 +16,10 @@ class NivaServer : LanguageServer, LanguageClientAware {
         val capabilities = ServerCapabilities()
 
         capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
-        capabilities.completionProvider = CompletionOptions()
+        capabilities.completionProvider = CompletionOptions().also {
+            it.triggerCharacters = (" " + "_" + ('a'..'z').joinToString("") + ('A'..'Z').joinToString(""))
+                .map { ch -> ch.toString() }
+        }
         capabilities.definitionProvider = Either.forLeft(true)
         capabilities.referencesProvider = Either.forLeft(true)
         capabilities.renameProvider = Either.forLeft(true)

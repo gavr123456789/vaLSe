@@ -14,6 +14,8 @@ import main.languageServer.LspResult
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
@@ -33,8 +35,9 @@ fun createCompletionItemFromResult(
             val expr = if (st is VarDeclaration) st.value else st
 //            client.info("expr is Expression = ${expr is Expression}, expr = $expr, expr type = ${expr::class.simpleName}")
             if (expr is Expression) {
-                val type = expr.type!!
+                val type = expr.type ?: return completions
                 val matchContext = resolveMatchContext(expr, sourceChanged, line, requestUri, lastPathChangedUri, client)
+                val partialWordRange = currentWordRange(sourceChanged, line, character, requestUri, lastPathChangedUri)
                 val matchIndent = matchContext.indent
                 val isPipeNeeded = expr is KeywordMsg && (!expr.isCascade || expr.isPiped)
                 val pipeIfNeeded = if (isPipeNeeded) ", " else ""
@@ -55,12 +58,15 @@ fun createCompletionItemFromResult(
                     }
                 }
 
-                val createCompletionItemForUnaryBinary = { msg: MessageMetadata, protocol: String ->
+                val createCompletionItemForUnaryBinary = { msg: MessageMetadata, protocol: String, parentLevel: String ->
                     CompletionItem(msg.name).also {
                         it.detail = "$type -> ${msg.returnType} " //+ "Pkg: " + msg.pkg
                         it.kind = CompletionItemKind.Function
+                        partialWordRange?.let { range ->
+                            it.textEdit = Either.forLeft(TextEdit(range, msg.name))
+                        }
 
-                        it.sortText = protocol + msg.name
+                        it.sortText = "$parentLevel $protocol + ${msg.name}"
 //                        it.filterText = protocol
 //                        it.detail = protocol
                         addDocsAndErrors(msg.errors, msg.docComment ?: msg.declaration?.docComment, it)
@@ -82,20 +88,20 @@ fun createCompletionItemFromResult(
 
 
                 // parent == null => Any
-                val seq = generateSequence(type) { it.parent }.toMutableList()
-                if (seq.last().name != "Any") {
-                    seq += anyType
+                val typesWithParents = generateSequence(type) { it.parent }.toMutableList()
+                if (typesWithParents.last().name != "Any") {
+                    typesWithParents += anyType
                 }
 
-                seq.forEach { currentType ->
+                typesWithParents.forEachIndexed { parentLevel, currentType ->
                     currentType.protocols.values.forEach { protocol ->
                     val unaryCompletions = protocol.unaryMsgs.values.map { unary ->
-                        createCompletionItemForUnaryBinary(unary, protocol.name)
+                        createCompletionItemForUnaryBinary(unary, protocol.name, (parentLevel).toString())
                     }
                     val binaryCompletions = protocol.binaryMsgs.values
                         .filter { it.name != "==" && it.name != "!=" }
                         .map { binary ->
-                            createCompletionItemForUnaryBinary(binary, protocol.name)
+                            createCompletionItemForUnaryBinary(binary, protocol.name, "z${parentLevel}")
                         }
 
 
@@ -105,27 +111,21 @@ fun createCompletionItemFromResult(
                             it.detail = "$currentType -> ${kw.returnType} " //+ "Pkg: " + kw.pkg
                             it.kind = CompletionItemKind.Function
                             it.insertTextFormat = InsertTextFormat.Snippet
-                            it.sortText = protocol.name + kw.name
+                            it.sortText = "$parentLevel" + protocol.name + kw.name
                             addDocsAndErrors(kw.errors, kw.docComment ?: kw.declaration?.docComment, it)
-                            val label = kw.argTypes.joinToString(" ") { x -> x.toString() }
+                            val label = kw.argTypes.joinToString(" ")
                             it.label = label // from: Int to: String
 
                             val insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
-                            it.insertText = insertText
-//                            if (lspResult.needBraceWrap) {
-//                                val pos = expr.token.toLspPosition()
-//                                pos.end.character = pos.start.character
-//
-////                                val endPos = pos.end.character + label.count()
-////                                val posEnd = Range(Position(pos.start.line, endPos), Position(pos.start.line, endPos))
-//                                it.insertText += ")"
-////                                client.info("\n$insertText\n$pos\n$posEnd\n")
-//                                it.additionalTextEdits = listOf(TextEdit(pos, "(")) //
-//                            }
+                            if (partialWordRange != null) {
+                                it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
+                            } else {
+                                it.insertText = insertText
+                            }
                         }
                     }
 
-                    // autocomplete constructors
+                    // autocomplete custom constructors
                     if (expr is IdentifierExpr && expr.isType) {
                         // find custom constructors
                         completions.addAll(protocol.staticMsgs.values.map { kw ->
@@ -140,10 +140,17 @@ fun createCompletionItemFromResult(
                                     it.label =
                                         kw.argTypes.joinToString(" ") { x -> x.toString() } // from: Int to: String
                                     it.insertTextFormat = InsertTextFormat.Snippet
-                                    it.insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
+                                    val insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
+                                    if (partialWordRange != null) {
+                                        it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
+                                    } else {
+                                        it.insertText = insertText
+                                    }
                                 } else {
                                     it.label = kw.name
-                                    it.textEdit
+                                    partialWordRange?.let { range ->
+                                        it.textEdit = Either.forLeft(TextEdit(range, kw.name))
+                                    }
                                 }
                             }
                         })
@@ -155,7 +162,7 @@ fun createCompletionItemFromResult(
                     }
                 }
                 }
-
+                // autocomplete constructors
                 if (type is Type.UserLike && expr is IdentifierExpr && expr.isType && type.fields.isNotEmpty()) {
                     completions.add(CompletionItem().also {
 
@@ -163,8 +170,12 @@ fun createCompletionItemFromResult(
                         it.kind = CompletionItemKind.Constructor
                         it.sortText = "aaa"
                         it.insertTextFormat = InsertTextFormat.Snippet
-                        it.insertText =
-                            constructInsertText(type.fields)
+                        val insertText = constructInsertText(type.fields)
+                        if (partialWordRange != null) {
+                            it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
+                        } else {
+                            it.insertText = insertText
+                        }
                     })
                 }
 
@@ -177,6 +188,9 @@ fun createCompletionItemFromResult(
                             it.detail = field.type.toString()
                             it.kind = CompletionItemKind.Field
                             it.sortText = "aaa" + field.name
+                            partialWordRange?.let { range ->
+                                it.textEdit = Either.forLeft(TextEdit(range, field.name))
+                            }
                         }
                     })
                 }
@@ -186,6 +200,9 @@ fun createCompletionItemFromResult(
                     completions.addAll(type.branches.map {
                         CompletionItem("." + it.name).also { ci ->
                             ci.kind = CompletionItemKind.EnumMember
+                            partialWordRange?.let { range ->
+                                ci.textEdit = Either.forLeft(TextEdit(range, "." + it.name))
+                            }
                         }
                     })
                 }
@@ -387,6 +404,26 @@ fun resolveLineText(sourceChanged: String?, line: Int, requestUri: String, lastP
 
     return sourceChanged.lineSequence().drop(line).firstOrNull()
 }
+
+fun currentWordRange(
+    sourceChanged: String?,
+    line: Int,
+    character: Int,
+    requestUri: String,
+    lastPathChangedUri: String?
+): Range? {
+    val lineText = resolveLineText(sourceChanged, line, requestUri, lastPathChangedUri) ?: return null
+    val cursor = character.coerceIn(0, lineText.length)
+    var start = cursor
+    while (start > 0 && lineText[start - 1].isNivaCompletionWordPart()) {
+        start--
+    }
+    if (start == cursor) return null
+    return Range(Position(line, start), Position(line, cursor))
+}
+
+private fun Char.isNivaCompletionWordPart(): Boolean =
+    isLetterOrDigit() || this == '_' || this == '.'
 
 fun formatMatchSnippet(raw: String, indent: String, exprText: String? = null): String {
     val rawLines = raw.split('\n').map { it.trimStart() }.filter { it.isNotEmpty() }
