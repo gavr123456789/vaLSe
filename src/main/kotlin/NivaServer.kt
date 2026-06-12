@@ -17,7 +17,7 @@ class NivaServer : LanguageServer, LanguageClientAware {
 
         capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
         capabilities.completionProvider = CompletionOptions().also {
-            it.triggerCharacters = (" " + "_" + ('a'..'z').joinToString("") + ('A'..'Z').joinToString(""))
+            it.triggerCharacters = ("_" + ('a'..'z').joinToString("") + ('A'..'Z').joinToString(""))
                 .map { ch -> ch.toString() }
         }
         capabilities.definitionProvider = Either.forLeft(true)
