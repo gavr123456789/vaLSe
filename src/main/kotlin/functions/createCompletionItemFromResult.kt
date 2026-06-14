@@ -61,10 +61,10 @@ fun createCompletionItemFromResult(
                 val createCompletionItemForUnaryBinary = { msg: MessageMetadata, protocol: String, parentLevel: String ->
                     CompletionItem(msg.name).also {
                         it.detail = "$type -> ${msg.returnType} " //+ "Pkg: " + msg.pkg
-                        it.kind = CompletionItemKind.Function
-                        partialWordRange?.let { range ->
-                            it.textEdit = Either.forLeft(TextEdit(range, msg.name))
-                        }
+//                        it.kind = CompletionItemKind.Function
+//                        partialWordRange?.let { range ->
+//                            it.textEdit = Either.forLeft(TextEdit(range, msg.name))
+//                        }
 
                         it.sortText = "$parentLevel $protocol + ${msg.name}"
 //                        it.filterText = protocol
@@ -117,11 +117,11 @@ fun createCompletionItemFromResult(
                             it.label = label // from: Int to: String
 
                             val insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
-                            if (partialWordRange != null) {
-                                it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
-                            } else {
+//                            if (partialWordRange != null) {
+//                                it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
+//                            } else {
                                 it.insertText = insertText
-                            }
+//                            }
                         }
                     }
 
@@ -141,11 +141,11 @@ fun createCompletionItemFromResult(
                                         kw.argTypes.joinToString(" ") { x -> x.toString() } // from: Int to: String
                                     it.insertTextFormat = InsertTextFormat.Snippet
                                     val insertText = pipeIfNeeded + constructInsertText(kw.argTypes)
-                                    if (partialWordRange != null) {
-                                        it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
-                                    } else {
+//                                    if (partialWordRange != null) {
+//                                        it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
+//                                    } else {
                                         it.insertText = insertText
-                                    }
+//                                    }
                                 } else {
                                     it.label = kw.name
                                     partialWordRange?.let { range ->
@@ -171,11 +171,11 @@ fun createCompletionItemFromResult(
                         it.sortText = "aaa"
                         it.insertTextFormat = InsertTextFormat.Snippet
                         val insertText = constructInsertText(type.fields)
-                        if (partialWordRange != null) {
-                            it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
-                        } else {
+//                        if (partialWordRange != null) {
+//                            it.textEdit = Either.forLeft(TextEdit(partialWordRange, insertText))
+//                        } else {
                             it.insertText = insertText
-                        }
+//                        }
                     })
                 }
 
